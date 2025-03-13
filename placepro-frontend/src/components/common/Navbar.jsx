@@ -40,7 +40,7 @@ const Navbar = () => {
           <li><Link to="/register" className="hover:text-blue-500" onClick={() => setIsOpen(false)}>REGISTRATION</Link></li>
           <li><Link to="/about_us" className="hover:text-blue-500" onClick={() => setIsOpen(false)}>ABOUT</Link></li>
           <li><Link to="/blog" className="hover:text-blue-500" onClick={() => setIsOpen(false)}>BLOG</Link></li>
-          <li><Link to="/contact" className="hover:text-blue-500" onClick={() => setIsOpen(false)}>CONTACT</Link></li>
+          <li><Link to="/contact_us" className="hover:text-blue-500" onClick={() => setIsOpen(false)}>CONTACT</Link></li>
         </ul>
       </div>
     </nav>
