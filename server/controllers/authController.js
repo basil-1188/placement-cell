@@ -115,3 +115,124 @@ export const logout = async (req, res) => {
         return res.json({ success: false, message: error.message });
     }
 };
+
+export const isAuthenticated = async(req, res) => {
+    try {
+        return res.json({success: true})
+    } catch (error) {
+        res.json({success: false, message: error.message})
+    }
+};
+
+export const sendResetOtp = async(req, res) => {
+    const { email } = req.body;
+
+    if(!email){
+        return res.json({success: false, message: 'Email is required'})
+    }
+
+    try {
+        const user = await userModel.findOne({ email })
+
+        if(!user)
+        {
+           return res.json({success: false, message: 'user not found'})
+        }
+
+        const otp = String(Math.floor(100000 + Math.random() * 900000));
+
+        user.resetOtp = otp;
+        user.resetOtpExpireAt = Date.now() + 10 * 60 * 1000
+
+        await user.save();
+
+        const mailOption = {
+            from: process.env.SENDER_EMAIL,
+            to: user.email,
+            subject: 'OTP Verification - Place-Pro Password Reset',
+    text: `Your One-Time Password (OTP) for resetting your password is: ${otp}
+
+This OTP is valid for 10 minutes. Please use it to reset your password.
+
+If you did not request this, please ignore this email.
+
+Best regards,  
+Nirmala College MCA Placement Team`,
+    html: `
+        <div style="font-family: Arial, sans-serif; background-color: #f9fafb; padding: 20px;">
+          <div style="max-width: 500px; background-color: #ffffff; padding: 20px; margin: auto; border-radius: 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);">
+            
+            <h2 style="color: #1e3a8a; text-align: center; font-size: 22px;">OTP Verification</h2>
+
+            <p style="color: #374151; text-align: center; font-size: 16px;">
+              Your One-Time Password (OTP) for resetting your password is:
+            </p>
+
+            <div style="background-color: #fef3c7; text-align: center; padding: 10px; font-size: 20px; font-weight: bold; color: #d97706; border-radius: 5px; margin: 15px 0;">
+              ${otp}
+            </div>
+
+            <p style="color: #6b7280; text-align: center; font-size: 15px;">
+              This OTP is valid for <strong>10 minutes</strong>. Please use it to reset your password.
+            </p>
+
+            <p style="color: #6b7280; text-align: center; font-size: 15px;">
+              If you did not request this, please ignore this email.
+            </p>
+
+            <p style="color: #6b7280; text-align: center; font-size: 14px; margin-top: 20px;">
+              Best regards, <br/>
+              <strong>Nirmala College MCA Placement Team</strong>
+            </p>
+          </div>
+        </div>
+        `
+        }
+        await transporter.sendMail(mailOption);
+
+        res.json({success: true, message: 'Verification otp send to your email'});
+
+
+    } catch (error) {
+        return res.json({success: false, message: error.message})
+    }
+
+}
+
+export const resetPassword = async(req, res) => {
+    const { email,otp,newPassword } = req.body;
+
+    if(!email|| !otp || !newPassword)
+    {
+        return res.json({success: false, message: 'Email, otp, password are required'});
+    }
+
+    try {
+
+        const user = await userModel.findOne({ email });
+        if(!user){
+            return res.json({success: false, message: 'user not found'});
+        }
+
+        if(user.resetOtp === "" || user.resetOtp !== otp){
+            return res.json({success: false, message: 'Invalid otp'})
+        }
+
+        if(user.resetOtpExpireAt < Date.now()){
+            return res.json({success: false, message: 'otp expired'});
+        }
+
+        const hashedPassword =  await bcrypt.hash(newPassword, 10);
+
+        user.password = hashedPassword;
+        user.resetOtp = '';
+        user.resetOtpExpireAt = 0;
+
+        await user.save()
+        return res.json({success: true, message: 'password successfully changed'});
+
+        
+    } catch (error) {
+        return res.json({success: false, message: error.message})
+    }
+}

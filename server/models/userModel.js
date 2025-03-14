@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
     password: {type: String, required: true},
     role: { type: String, enum: ["admin", "placement_officer", "training_team", "student"], required: true, default: "student" },
     profileImage: { type: String, default: null },
+    resetOtp: { type: String, default: "" }, // Add OTP fieldnull }
 },
 { timestamps: true })
 
