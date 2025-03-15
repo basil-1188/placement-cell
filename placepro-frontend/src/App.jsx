@@ -15,6 +15,7 @@ import Footers from './components/common/Footers'
 import Navbar from './components/common/Navbar'
 import Contact from './pages/common/Contact'
 import AboutUs from './pages/common/AboutUs'
+import Login from './pages/auth/Login'
 
 const App = () => {
   return (
@@ -25,6 +26,7 @@ const App = () => {
         <Route path='/blogs' element={<Blogs />} />
         <Route path='/contact_us' element={<Contact />} />
         <Route path='/about_us' element={<AboutUs />} />
+        <Route path='/login' element={<Login />} />
 
         <Route path='/user' element={<UserLayout />}>
           <Route index element={<UserDashboard />} />

@@ -16,7 +16,7 @@ const Navbar = () => {
         </Link>
 
         <ul className="hidden md:flex space-x-8 text-lg font-medium">
-          <li><Link to="/signin" className="hover:text-blue-500 transition duration-300">SIGN IN</Link></li>
+          <li><Link to="/login" className="hover:text-blue-500 transition duration-300">SIGN IN</Link></li>
           <li><Link to="/register" className="hover:text-blue-500 transition duration-300">REGISTRATION</Link></li>
           <li><Link to="/about_us" className="hover:text-blue-500 transition duration-300">ABOUT</Link></li>
           <li><Link to="/blog" className="hover:text-blue-500 transition duration-300">BLOG</Link></li>
@@ -36,7 +36,7 @@ const Navbar = () => {
           </button>
         </div>
         <ul className="flex flex-col items-center space-y-6 text-xl font-medium">
-          <li><Link to="/signin" className="hover:text-blue-500" onClick={() => setIsOpen(false)}>SIGN IN</Link></li>
+          <li><Link to="/login" className="hover:text-blue-500" onClick={() => setIsOpen(false)}>SIGN IN</Link></li>
           <li><Link to="/register" className="hover:text-blue-500" onClick={() => setIsOpen(false)}>REGISTRATION</Link></li>
           <li><Link to="/about_us" className="hover:text-blue-500" onClick={() => setIsOpen(false)}>ABOUT</Link></li>
           <li><Link to="/blog" className="hover:text-blue-500" onClick={() => setIsOpen(false)}>BLOG</Link></li>

@@ -2,10 +2,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
 import transporter from '../config/nodemailer.js';
+import { uploadToCloudinary } from '../utils/Cloudinary.js';
 
 
 export const register = async (req, res) => {
     const { name, email, password } = req.body;
+    const file = req.file
 
     if (!name || !email || !password) {
         return res.json({ success: false, message: 'Missing Details' });
@@ -18,6 +20,10 @@ export const register = async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
+        let profileImageUrl = null;
+        if(file){
+            profileImageUrl = await uploadToCloudinary(file);
+        }
         const user = new userModel({ name, email, password: hashedPassword });
         await user.save();
 
