@@ -1,11 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
 import { FaUser, FaLock, FaEnvelope, FaCamera } from "react-icons/fa";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { useNavigate, useLocation } from "react-router-dom"; // Removed invalid 'data' import
+import { AppContext } from "../../context/AppContext";
 
 const AuthForm = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const { backendUrl, isLogin: contextIsLogin, setIsLogin, userData, setUserData } = useContext(AppContext);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [localIsLogin, setLocalIsLogin] = useState(location.pathname === "/login");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -13,8 +18,12 @@ const AuthForm = () => {
     profilePic: null,
   });
   const [preview, setPreview] = useState(null);
-  const [error, setError] = useState("");
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLocalIsLogin(location.pathname === "/login");
+    setIsLogin(location.pathname === "/login");
+  }, [location.pathname, setIsLogin]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -26,25 +35,32 @@ const AuthForm = () => {
       setFormData({ ...formData, profilePic: file });
       setPreview(URL.createObjectURL(file));
     } else {
-      alert("Please upload a valid image file!");
+      toast.error("Please upload a valid image file!");
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setLoading(true);
 
     try {
-      if (isLogin) {
-        const response = await axios.post("http://localhost:5000/api/auth/login", {
-          email: formData.email,
-          password: formData.password,
-        });
+      if (localIsLogin) {
+        const response = await axios.post(
+          `${backendUrl}/api/auth/login`,
+          {
+            email: formData.email,
+            password: formData.password,
+          },
+          { withCredentials: true } // Include credentials for cookies
+        );
         if (response.data.success) {
           localStorage.setItem("token", response.data.token);
-          navigate("/profile"); 
+          setUserData(response.data.user || {});
+          setIsLogin(true); // Update login state
+          navigate("/");
+          toast.success("Logged in successfully!");
         } else {
-          setError(response.data.message);
+          toast.error(response.data.message || "Login failed");
         }
       } else {
         const formDataToSend = new FormData();
@@ -52,28 +68,55 @@ const AuthForm = () => {
         formDataToSend.append("email", formData.email);
         formDataToSend.append("password", formData.password);
         if (formData.profilePic) {
-          formDataToSend.append("profilePic", formData.profilePic);
+          formDataToSend.append("profileImage", formData.profilePic);
         }
 
-        const response = await axios.post("http://localhost:5000/api/auth/register", formDataToSend, {
+        const response = await axios.post(`${backendUrl}/api/auth/register`, formDataToSend, {
           headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true, // Include credentials for cookies
         });
         if (response.data.success) {
-          navigate("/otp-verification", { state: { email: formData.email } });
+          navigate("/", { state: { email: formData.email } });
+          toast.success("Registered successfully! Please verify your email.");
         } else {
-          setError(response.data.message);
+          toast.error(response.data.message || "Registration failed");
         }
       }
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      toast.error(err.response?.data?.message || "An error occurred. Please try again.");
+      console.error("Submission error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const dotSize = 12;
+
   return (
-    <section className="flex mt-15 items-center justify-center min-h-screen bg-gradient-to-br from-black via-gray-900 to-blue-800 text-white overflow-hidden relative">
-      <div className="relative z-10 bg-gray-800 bg-opacity-85 p-10 rounded-3xl shadow-2xl max-w-md w-full border border-blue-500/60 backdrop-blur-md">
-        {/* Profile Picture Upload (Only for Register) */}
-        {!isLogin && (
+    <section className="relative flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-100 to-white overflow-hidden">
+      {[...Array(10)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-3 h-3 bg-black rounded-full opacity-50"
+          initial={{
+            x: Math.random() * (window.innerWidth - dotSize),
+            y: Math.random() * (window.innerHeight - dotSize),
+          }}
+          animate={{
+            x: Math.random() * (window.innerWidth - dotSize),
+            y: Math.random() * (window.innerHeight - dotSize),
+          }}
+          transition={{
+            duration: Math.random() * 6 + 3,
+            repeat: Infinity,
+            repeatType: "mirror",
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+
+      <div className="relative z-10 bg-gradient-to-br from-gray-800 to-gray-900 p-10 rounded-3xl shadow-xl border border-gray-700 max-w-md w-full">
+        {!localIsLogin && (
           <div className="flex justify-center mb-4 relative">
             <label className="relative cursor-pointer">
               <motion.div
@@ -88,13 +131,8 @@ const AuthForm = () => {
                   <FaUser className="text-gray-400 text-4xl" />
                 )}
               </motion.div>
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              <div className="absolute bottom-0 right-0 bg-blue-600 p-2 rounded-full border border-white shadow-md">
+              <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+              <div className="absolute bottom-0 right-0 bg-purple-600 p-2 rounded-full border border-white shadow-md">
                 <FaCamera className="text-white text-sm" />
               </div>
             </label>
@@ -102,87 +140,86 @@ const AuthForm = () => {
         )}
 
         <motion.h2
-          className="text-4xl font-extrabold text-center mb-6 bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent"
-          initial={{ opacity: 0, y: -30 }}
+          className="text-3xl font-extrabold text-center mb-6 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent"
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.6 }}
         >
-          {isLogin ? "Welcome Back!" : "Create Your Account"}
+          {localIsLogin ? "Welcome Back!" : "Create Your Account"}
         </motion.h2>
 
-        {error && (
-          <motion.p
-            className="text-red-400 text-center mb-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            {error}
-          </motion.p>
-        )}
-
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {!isLogin && (
+          {!localIsLogin && (
             <div className="relative">
-              <FaUser className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-400 text-xl" />
+              <FaUser className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-400 text-lg" />
               <input
                 type="text"
                 name="name"
                 placeholder="Full Name"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full p-4 pl-12 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+                className="w-full p-4 pl-12 bg-gray-700 text-white border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
               />
             </div>
           )}
 
           <div className="relative">
-            <FaEnvelope className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-400 text-xl" />
+            <FaEnvelope className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-400 text-lg" />
             <input
               type="email"
               name="email"
               placeholder="Email Address"
               value={formData.email}
               onChange={handleChange}
-              className="w-full p-4 pl-12 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+              className="w-full p-4 pl-12 bg-gray-700 text-white border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               required
             />
           </div>
 
           <div className="relative">
-            <FaLock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-400 text-xl" />
+            <FaLock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-400 text-lg" />
             <input
               type="password"
               name="password"
               placeholder="Password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full p-4 pl-12 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+              className="w-full p-4 pl-12 bg-gray-700 text-white border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               required
             />
           </div>
 
-          {/* Submit Button */}
+          {localIsLogin && (
+            <div className="text-right">
+              <button
+                type="button"
+                className="text-purple-400 hover:underline text-sm"
+                onClick={() => navigate("/forgot-password")}
+              >
+                Forgot Password?
+              </button>
+            </div>
+          )}
+
           <motion.button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all"
-            whileTap={{ scale: 0.96 }}
+            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-xl font-semibold text-lg shadow-md hover:shadow-lg transition-all"
+            whileTap={{ scale: 0.98 }}
             whileHover={{ scale: 1.02 }}
+            disabled={loading}
           >
-            {isLogin ? "Sign In" : "Register"}
+            {loading ? "Processing..." : localIsLogin ? "Sign In" : "Register"}
           </motion.button>
         </form>
 
-        {/* Toggle Login/Register */}
         <p className="mt-6 text-center text-gray-400 text-sm">
-          {isLogin ? "Don't have an account?" : "Already have an account?"}
+          {localIsLogin ? "Don't have an account?" : "Already have an account?"}
           <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-blue-400 font-semibold ml-1 hover:underline transition duration-300"
+            onClick={() => navigate(localIsLogin ? "/register" : "/login")}
+            className="text-purple-400 font-semibold ml-1 hover:underline"
           >
-            {isLogin ? "Sign Up" : "Sign In"}
+            {localIsLogin ? "Sign Up" : "Sign In"}
           </button>
         </p>
       </div>
