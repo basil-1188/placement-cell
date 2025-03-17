@@ -1,4 +1,3 @@
-// AppContext.jsx
 import { createContext, useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -22,7 +21,10 @@ export const AppContextProvider = (props) => {
         localStorage.setItem("isLoggedIn", "true");
         setIsLogin(true);
         const user = await getUserData();
-        if (user) setUserData(user); // Only set if user data is valid
+        if (user) {
+          console.log("Setting userData after auth check:", user);
+          setUserData(user); // Only set if user data is valid
+        }
       } else {
         console.log("Authentication failed:", response.data.message);
         setIsLogin(false);
@@ -74,11 +76,8 @@ export const AppContextProvider = (props) => {
       if (data.success) {
         localStorage.setItem("isLoggedIn", "true");
         setIsLogin(true);
-        const user = await getUserData();
-        if (user) {
-          console.log("Login successful, setting userData:", user);
-          setUserData(user);
-        }
+        console.log("Login successful, setting userData:", data.user);
+        setUserData(data.user); // Set userData directly from login response
       } else {
         throw new Error(data.message);
       }

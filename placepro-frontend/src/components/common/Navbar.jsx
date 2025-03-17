@@ -1,5 +1,4 @@
-// Navbar.jsx
-import React, { useState, useContext } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import logo from "../../assets/logo.png";
@@ -8,7 +7,19 @@ import { AppContext } from "../../context/AppContext";
 const Navbar = () => {
   const { userData, backendUrl, logout } = useContext(AppContext);
   const [isOpen, setIsOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [hasTest, setHasTest] = useState(false); // Added state for hasTest
+  const [dropdownStates, setDropdownStates] = useState({}); // Object to track individual dropdown states
+
+  // Fetch whether a test is scheduled for the "Take Scheduled Test" option
+  useEffect(() => {
+    fetch(`${backendUrl}/api/mock-tests/schedule`)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Fetched test schedule:", data); // Debug API response
+        setHasTest(data.success);
+      })
+      .catch((error) => console.error("Error fetching schedule:", error));
+  }, [backendUrl]);
 
   console.log("Navbar - userData:", userData); // Debug userData
   console.log("Navbar - userData.role:", userData?.role); // Debug role
@@ -28,8 +39,24 @@ const Navbar = () => {
       case "student":
         return [
           { path: "/blog", label: "BLOG" },
-          { path: "/mock-tests", label: "MOCK TESTS" },
-          { path: "/study-materials", label: "STUDY MATERIALS" },
+          {
+            path: "/mock-tests",
+            label: "MOCK TESTS",
+            dropdown: [
+              { path: "/mock-tests/marks", label: "Past Results" },
+              { path: "/mock-tests/ranks", label: "Leaderboard Rankings" },
+              { path: "/mock-tests/new-test", label: "Take Scheduled Test", condition: hasTest },
+            ],
+          },
+          {
+            path: "/study-materials",
+            label: "STUDY MATERIALS",
+            dropdown: [
+              { path: "/study-materials/resources", label: "Materials" },
+              { path: "/study-materials/videos", label: "Videos" },
+              { path: "/study-materials/qa", label: "Questions & Answers" },
+            ],
+          },
           { path: "/ai-interview", label: "AI INTERVIEW" },
         ];
       case "placement_officer":
@@ -42,7 +69,15 @@ const Navbar = () => {
       case "training_team":
         return [
           { path: "/blog", label: "BLOG" },
-          { path: "/study-materials", label: "STUDY MATERIALS" },
+          {
+            path: "/study-materials",
+            label: "STUDY MATERIALS",
+            dropdown: [
+              { path: "/study-materials/resources", label: "Materials" },
+              { path: "/study-materials/videos", label: "Videos" },
+              { path: "/study-materials/qa", label: "Questions & Answers" },
+            ],
+          },
           { path: "/upload-videos", label: "UPLOAD VIDEOS" },
           { path: "/resume-review", label: "RESUME REVIEW" },
         ];
@@ -52,8 +87,30 @@ const Navbar = () => {
     }
   };
 
+  // Initialize dropdownStates for each item with a dropdown
   const navItems = getNavItems();
+  useEffect(() => {
+    const initialDropdownStates = {};
+    navItems.forEach((item) => {
+      if (item.dropdown) {
+        initialDropdownStates[item.path] = false; // Initialize each dropdown as closed
+      }
+    });
+    initialDropdownStates["user-dropdown"] = false; // Initialize user dropdown
+    setDropdownStates(initialDropdownStates);
+  }, []); // Run once on mount
+
   console.log("getNavItems result:", navItems); // Debug nav items
+  console.log("dropdownStates:", dropdownStates); // Debug dropdown states
+
+  // Helper function to toggle dropdown state
+  const toggleDropdown = (path) => {
+    console.log("Toggling dropdown for:", path); // Debug toggle
+    setDropdownStates((prev) => ({
+      ...prev,
+      [path]: !prev[path],
+    }));
+  };
 
   return (
     <nav className="fixed top-0 left-0 w-full bg-white shadow-md z-50">
@@ -67,32 +124,76 @@ const Navbar = () => {
 
         <ul className="hidden md:flex space-x-8 text-lg font-medium">
           {navItems.map((item) => (
-            <li key={item.path}>
-              <Link to={item.path} className="hover:text-blue-500">
-                {item.label}
-              </Link>
+            <li key={item.path} className="relative">
+              {item.dropdown ? (
+                <div className="dropdown">
+                  <button
+                    className="hover:text-blue-500 focus:outline-none"
+                    onClick={() => toggleDropdown(item.path)}
+                  >
+                    {item.label}
+                  </button>
+                  {dropdownStates[item.path] && (
+                    <ul className="absolute left-0 mt-2 w-48 bg-white shadow-md rounded-md">
+                      {item.dropdown.map((dropdownItem) => (
+                        <li
+                          key={dropdownItem.path}
+                          className="dropdown-item"
+                          style={{
+                            display:
+                              dropdownItem.condition === false ? "none" : "block",
+                          }}
+                        >
+                          <Link
+                            to={dropdownItem.path}
+                            className="block px-4 py-2 hover:bg-gray-100"
+                            onClick={() => toggleDropdown(item.path)}
+                          >
+                            {dropdownItem.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : (
+                <Link to={item.path} className="hover:text-blue-500">
+                  {item.label}
+                </Link>
+              )}
             </li>
           ))}
 
           {userData && (
             <li className="relative">
               <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
+                onClick={() => toggleDropdown("user-dropdown")}
                 className="flex items-center space-x-2 hover:text-blue-500 transition duration-300"
               >
                 <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-semibold text-lg">
                   {userData?.name?.[0]?.toUpperCase() || "U"}
                 </div>
               </button>
-              {dropdownOpen && (
+              {dropdownStates["user-dropdown"] && (
                 <div className="absolute right-0 mt-2 w-48 bg-white shadow-md rounded-md">
-                  <Link to="/profile" className="block px-4 py-2 hover:bg-gray-100">
+                  <Link
+                    to="/user/profile"
+                    className="block px-4 py-2 hover:bg-gray-100"
+                    onClick={() => toggleDropdown("user-dropdown")}
+                  >
                     Profile
+                  </Link>
+                  <Link
+                    to="/user/upload-details"
+                    className="block px-4 py-2 w-full text-left hover:bg-gray-100"
+                    onClick={() => toggleDropdown("user-dropdown")}
+                  >
+                    Upload Details
                   </Link>
                   <button
                     onClick={() => {
                       logout();
-                      setDropdownOpen(false);
+                      toggleDropdown("user-dropdown");
                     }}
                     className="block px-4 py-2 w-full text-left hover:bg-gray-100"
                   >
@@ -104,8 +205,15 @@ const Navbar = () => {
           )}
         </ul>
 
-        <button className="md:hidden text-2xl" onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <FaTimes className="text-gray-700" /> : <FaBars className="text-gray-700" />}
+        <button
+          className="md:hidden text-2xl"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {isOpen ? (
+            <FaTimes className="text-gray-700" />
+          ) : (
+            <FaBars className="text-gray-700" />
+          )}
         </button>
       </div>
 
@@ -121,14 +229,50 @@ const Navbar = () => {
         </div>
         <ul className="flex flex-col items-center space-y-6 text-xl font-medium">
           {navItems.map((item) => (
-            <li key={item.path}>
-              <Link
-                to={item.path}
-                className="hover:text-blue-500"
-                onClick={() => setIsOpen(false)}
-              >
-                {item.label}
-              </Link>
+            <li key={item.path} className="relative">
+              {item.dropdown ? (
+                <div className="dropdown">
+                  <button
+                    className="hover:text-blue-500 focus:outline-none"
+                    onClick={() => toggleDropdown(item.path)}
+                  >
+                    {item.label}
+                  </button>
+                  {dropdownStates[item.path] && (
+                    <ul className="mt-2 w-48 bg-white shadow-md rounded-md">
+                      {item.dropdown.map((dropdownItem) => (
+                        <li
+                          key={dropdownItem.path}
+                          className="dropdown-item"
+                          style={{
+                            display:
+                              dropdownItem.condition === false ? "none" : "block",
+                          }}
+                        >
+                          <Link
+                            to={dropdownItem.path}
+                            className="block px-4 py-2 hover:bg-gray-100"
+                            onClick={() => {
+                              setIsOpen(false);
+                              toggleDropdown(item.path);
+                            }}
+                          >
+                            {dropdownItem.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  to={item.path}
+                  className="hover:text-blue-500"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              )}
             </li>
           ))}
 
@@ -136,11 +280,20 @@ const Navbar = () => {
             <>
               <li>
                 <Link
-                  to="/profile"
+                  to="/user/profile"
                   className="hover:text-blue-500"
                   onClick={() => setIsOpen(false)}
                 >
                   Profile
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/user/upload-details"
+                  className="hover:text-blue-500"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Upload Details
                 </Link>
               </li>
               <li>

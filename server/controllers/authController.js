@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import userModel from "../models/userModel.js";
+import { userModel } from "../models/userModel.js";
 import transporter from "../config/nodemailer.js";
 import { uploadToCloudinary } from "../utils/Cloudinary.js";
 
@@ -21,7 +21,12 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     let profileImageUrl = null;
     if (file) {
-      profileImageUrl = await uploadToCloudinary(file);
+      try {
+        const publicId = `${email}_${Date.now()}`;
+        profileImageUrl = await uploadToCloudinary(req.file, "profile", publicId);
+      } catch (uploadError) {
+        return res.status(500).json({ success: false, message: uploadError.message });
+      }
     }
     const user = new userModel({
       name,
@@ -73,7 +78,13 @@ export const register = async (req, res) => {
 
     return res.json({
       success: true,
-      user: { name: user.name, profileImage: user.profileImage },
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role, 
+        profileImage: user.profileImage,
+      },
     });
   } catch (error) {
     console.error("Registration error:", error.message);
@@ -110,7 +121,13 @@ export const login = async (req, res) => {
 
     return res.json({
       success: true,
-      user: { name: user.name, profileImage: user.profileImage },
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role, 
+        profileImage: user.profileImage,
+      },
     });
   } catch (error) {
     return res.json({ success: false, message: error.message });

@@ -36,13 +36,13 @@ const Home = () => {
             </p>
             <div className="mt-6 flex justify-center lg:justify-start space-x-4">
               <Link 
-                to="/contact" 
+                to="/contact_us" 
                 className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-blue-700 transition font-semibold"
               >
                 Get in Touch
               </Link>
               <Link 
-                to="/about" 
+                to="/about_us" 
                 className="border border-blue-600 text-blue-600 px-6 py-3 rounded-lg shadow-lg hover:bg-blue-600 hover:text-white transition font-semibold"
               >
                 Learn More

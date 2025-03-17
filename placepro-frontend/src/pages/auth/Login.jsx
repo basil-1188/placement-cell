@@ -1,4 +1,3 @@
-// AuthForm.jsx
 import React, { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
 import { FaUser, FaLock, FaEnvelope, FaCamera } from "react-icons/fa";
@@ -8,7 +7,7 @@ import { AppContext } from "../../context/AppContext";
 import axios from "axios";
 
 const AuthForm = () => {
-  const { backendUrl, setIsLogin, setUserData, login } = useContext(AppContext);
+  const { backendUrl, setIsLogin, login, getAuthState } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
   const [localIsLogin, setLocalIsLogin] = useState(location.pathname === "/login");
@@ -69,10 +68,10 @@ const AuthForm = () => {
           }
         );
         if (response.data.success) {
-          setUserData(response.data.user);
           setIsLogin(true);
           localStorage.setItem("isLoggedIn", "true");
-          navigate("/", { state: { email: formData.email } });
+          await getAuthState();
+          navigate("/");
           toast.success("Registered successfully! Please verify your email.");
         } else {
           toast.error(response.data.message || "Registration failed");

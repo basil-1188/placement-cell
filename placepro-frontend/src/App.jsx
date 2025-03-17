@@ -19,6 +19,7 @@ import AuthForm from "./pages/auth/Login";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AppContextProvider } from "./context/AppContext"; // Import the provider
+import StudentDetailsForm from "./pages/user/StudentDetailsForm";
 
 const App = () => {
   return (
@@ -37,6 +38,7 @@ const App = () => {
           <Route path="/user" element={<UserLayout />}>
             <Route index element={<UserDashboard />} />
             <Route path="profile" element={<Profile />} />
+            <Route path ="upload-details" element={<StudentDetailsForm />} />
             <Route path="results" element={<Results />} />
             <Route path="mock-test" element={<MockTest />} />
           </Route>
