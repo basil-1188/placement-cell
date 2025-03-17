@@ -1,13 +1,14 @@
+// AuthForm.jsx
 import React, { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
 import { FaUser, FaLock, FaEnvelope, FaCamera } from "react-icons/fa";
-import axios from "axios";
 import { toast } from "react-toastify";
-import { useNavigate, useLocation } from "react-router-dom"; // Removed invalid 'data' import
+import { useNavigate, useLocation } from "react-router-dom";
 import { AppContext } from "../../context/AppContext";
+import axios from "axios";
 
 const AuthForm = () => {
-  const { backendUrl, isLogin: contextIsLogin, setIsLogin, userData, setUserData } = useContext(AppContext);
+  const { backendUrl, setIsLogin, setUserData, login } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
   const [localIsLogin, setLocalIsLogin] = useState(location.pathname === "/login");
@@ -22,8 +23,7 @@ const AuthForm = () => {
 
   useEffect(() => {
     setLocalIsLogin(location.pathname === "/login");
-    setIsLogin(location.pathname === "/login");
-  }, [location.pathname, setIsLogin]);
+  }, [location.pathname]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -45,23 +45,12 @@ const AuthForm = () => {
 
     try {
       if (localIsLogin) {
-        const response = await axios.post(
-          `${backendUrl}/api/auth/login`,
-          {
-            email: formData.email,
-            password: formData.password,
-          },
-          { withCredentials: true } // Include credentials for cookies
-        );
-        if (response.data.success) {
-          localStorage.setItem("token", response.data.token);
-          setUserData(response.data.user || {});
-          setIsLogin(true); // Update login state
-          navigate("/");
-          toast.success("Logged in successfully!");
-        } else {
-          toast.error(response.data.message || "Login failed");
-        }
+        await login({
+          email: formData.email,
+          password: formData.password,
+        });
+        navigate("/");
+        toast.success("Logged in successfully!");
       } else {
         const formDataToSend = new FormData();
         formDataToSend.append("name", formData.name);
@@ -71,11 +60,18 @@ const AuthForm = () => {
           formDataToSend.append("profileImage", formData.profilePic);
         }
 
-        const response = await axios.post(`${backendUrl}/api/auth/register`, formDataToSend, {
-          headers: { "Content-Type": "multipart/form-data" },
-          withCredentials: true, // Include credentials for cookies
-        });
+        const response = await axios.post(
+          `${backendUrl}/api/auth/register`,
+          formDataToSend,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+            withCredentials: true,
+          }
+        );
         if (response.data.success) {
+          setUserData(response.data.user);
+          setIsLogin(true);
+          localStorage.setItem("isLoggedIn", "true");
           navigate("/", { state: { email: formData.email } });
           toast.success("Registered successfully! Please verify your email.");
         } else {
@@ -93,7 +89,7 @@ const AuthForm = () => {
   const dotSize = 12;
 
   return (
-    <section className="relative flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-100 to-white overflow-hidden">
+    <section className="relative mt-15 flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-100 to-white overflow-hidden">
       {[...Array(10)].map((_, i) => (
         <motion.div
           key={i}
