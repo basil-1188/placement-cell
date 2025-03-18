@@ -7,7 +7,7 @@ export const AppContext = createContext();
 export const AppContextProvider = (props) => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, ""); // Remove trailing slashes
 
-  const [isLogin, setIsLogin] = useState(false); // Default to false
+  const [isLogin, setIsLogin] = useState(false);
   const [userData, setUserData] = useState(null);
 
   const getAuthState = async () => {
@@ -23,7 +23,7 @@ export const AppContextProvider = (props) => {
         const user = await getUserData();
         if (user) {
           console.log("Setting userData after auth check:", user);
-          setUserData(user); // Only set if user data is valid
+          setUserData(user);
         }
       } else {
         console.log("Authentication failed:", response.data.message);
@@ -77,7 +77,7 @@ export const AppContextProvider = (props) => {
         localStorage.setItem("isLoggedIn", "true");
         setIsLogin(true);
         console.log("Login successful, setting userData:", data.user);
-        setUserData(data.user); // Set userData directly from login response
+        setUserData(data.user);
       } else {
         throw new Error(data.message);
       }

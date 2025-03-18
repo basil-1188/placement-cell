@@ -7,10 +7,9 @@ import { AppContext } from "../../context/AppContext";
 const Navbar = () => {
   const { userData, backendUrl, logout } = useContext(AppContext);
   const [isOpen, setIsOpen] = useState(false);
-  const [hasTest, setHasTest] = useState(false); // Added state for hasTest
-  const [dropdownStates, setDropdownStates] = useState({}); // Object to track individual dropdown states
+  const [hasTest, setHasTest] = useState(false); 
+  const [dropdownStates, setDropdownStates] = useState({}); 
 
-  // Fetch whether a test is scheduled for the "Take Scheduled Test" option
   useEffect(() => {
     fetch(`${backendUrl}/api/mock-tests/schedule`)
       .then((response) => response.json())
@@ -87,7 +86,6 @@ const Navbar = () => {
     }
   };
 
-  // Initialize dropdownStates for each item with a dropdown
   const navItems = getNavItems();
   useEffect(() => {
     const initialDropdownStates = {};

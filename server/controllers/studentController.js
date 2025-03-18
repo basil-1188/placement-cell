@@ -4,10 +4,10 @@ import { uploadToCloudinary } from "../utils/Cloudinary.js";
 // Add or update student details
 export const addStudentDetails = async (req, res) => {
   try {
-    console.log('addStudentDetails - req.user:', req.user);
+    console.log("addStudentDetails - req.user:", req.user);
 
     if (!req.user || !req.user._id) {
-      console.log('addStudentDetails - User authentication failed:', req.user);
+      console.log("addStudentDetails - User authentication failed:", req.user);
       return res.status(401).json({ success: false, message: "Unauthorized: User not authenticated" });
     }
 
@@ -93,14 +93,15 @@ export const addStudentDetails = async (req, res) => {
       try {
         const publicId = `${admnNo}_${Date.now()}`;
         resumeUrl = await uploadToCloudinary(req.file, "resumes", publicId);
-        console.log('addStudentDetails - Resume URL:', resumeUrl);
+        console.log("addStudentDetails - Resume URL:", resumeUrl);
       } catch (uploadError) {
-        return res.status(500).json({ success: false, message: uploadError.message });
+        console.error("addStudentDetails - Upload error:", uploadError.message);
+        return res.status(500).json({ success: false, message: `Failed to upload resume: ${uploadError.message}` });
       }
     }
 
     const studentId = req.user._id;
-    console.log('addStudentDetails - studentId:', studentId);
+    console.log("addStudentDetails - studentId:", studentId);
 
     const studentDetails = await studentModel.findOneAndUpdate(
       { studentId },
@@ -119,7 +120,7 @@ export const addStudentDetails = async (req, res) => {
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
-    console.log('addStudentDetails - Updated studentDetails:', studentDetails);
+    console.log("addStudentDetails - Updated studentDetails:", studentDetails);
 
     res.status(201).json({ success: true, message: "Student details added/updated successfully", data: studentDetails });
   } catch (error) {
@@ -137,13 +138,13 @@ export const addStudentDetails = async (req, res) => {
 export const getStudentDetails = async (req, res) => {
   try {
     const studentId = req.user._id;
-    console.log('getStudentDetails - Fetching details for studentId:', studentId);
+    console.log("getStudentDetails - Fetching details for studentId:", studentId);
     const studentDetails = await studentModel.findOne({ studentId });
     if (!studentDetails) {
-      console.log('getStudentDetails - No details found for studentId:', studentId);
+      console.log("getStudentDetails - No details found for studentId:", studentId);
       return res.status(200).json({ success: false, message: "No student details found" });
     }
-    console.log('getStudentDetails - Found details:', studentDetails);
+    console.log("getStudentDetails - Found details:", studentDetails);
     res.status(200).json({ success: true, data: studentDetails });
   } catch (error) {
     console.error("Error fetching student details:", error.message);

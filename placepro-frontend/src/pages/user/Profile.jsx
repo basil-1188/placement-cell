@@ -65,18 +65,38 @@ const Profile = () => {
   const profileImageUrl = userData?.profileImage || defaultProfileImage;
   console.log("Profile - profileImageUrl:", profileImageUrl);
 
-  // Handle resume download
-  const handleDownloadResume = () => {
-    if (studentDetails?.resume) {
+  const handleDownloadResume = async () => {
+    if (!studentDetails?.resume) {
+      toast.info("No resume uploaded yet.");
+      return;
+    }
+
+    try {
+      const response = await axios.get(studentDetails.resume, {
+        responseType: "blob",
+      });
+
+      const contentType = response.headers["content-type"];
+      console.log("Resume Content-Type:", contentType);
+      if (!contentType.includes("pdf")) {
+        console.warn("Unexpected Content-Type:", contentType);
+        toast.error("The file does not appear to be a valid PDF.");
+        return;
+      }
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = studentDetails.resume;
-      link.download = `resume_${studentDetails.admnNo || "user"}.pdf`;
+      link.href = url;
+      link.download = `resume_${studentDetails.admnNo || "user"}.pdf`; 
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
       toast.success("Resume downloaded successfully!");
-    } else {
-      toast.info("No resume uploaded yet.");
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to download resume. Please try again.");
     }
   };
 
@@ -120,7 +140,6 @@ const Profile = () => {
                     e.target.src = defaultProfileImage;
                   }}
                 />
-              
               </motion.div>
 
               {/* User Details */}
@@ -207,6 +226,7 @@ const Profile = () => {
                 </div>
               )}
 
+              {/* Download Resume Button at the Bottom */}
               <div className="mt-10 flex justify-center">
                 <motion.button
                   className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center space-x-2 shadow-md"
