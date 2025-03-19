@@ -2,7 +2,6 @@ import express from 'express'
 import { isAuthenticated, login, logout, register, resetPassword, sendResetOtp } from '../controllers/authController.js';
 import userAuth from '../middleware/userAuth.js';
 import { uploadProfileImage, uploadResume } from '../middleware/multer.js';
-import { addStudentDetails } from '../controllers/studentController.js';
 
 const authRouter = express.Router();
 

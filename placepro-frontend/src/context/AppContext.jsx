@@ -1,47 +1,35 @@
+// src/context/AppContext.jsx
 import { createContext, useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom"; // Add this
 
 export const AppContext = createContext();
 
 export const AppContextProvider = (props) => {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, ""); // Remove trailing slashes
-
+  const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
   const [isLogin, setIsLogin] = useState(false);
   const [userData, setUserData] = useState(null);
+  const navigate = useNavigate(); // Add this
 
   const getAuthState = async () => {
     try {
-      console.log("Checking authentication at:", `${backendUrl}/api/auth/is-auth`);
+      console.log("Checking auth at:", `${backendUrl}/api/auth/is-auth`);
       const response = await axios.get(`${backendUrl}/api/auth/is-auth`, {
         withCredentials: true,
       });
       console.log("Auth response:", response.data);
       if (response.data.success) {
-        localStorage.setItem("isLoggedIn", "true");
         setIsLogin(true);
         const user = await getUserData();
-        if (user) {
-          console.log("Setting userData after auth check:", user);
-          setUserData(user);
-        }
+        if (user) setUserData(user);
       } else {
-        console.log("Authentication failed:", response.data.message);
         setIsLogin(false);
-        localStorage.removeItem("isLoggedIn");
         setUserData(null);
       }
     } catch (error) {
-      console.error("getAuthState error:", {
-        status: error.response?.status,
-        message: error.response?.data?.message || error.message,
-        headers: error.config?.headers,
-      });
-      if (error.response?.status !== 401) {
-        toast.error(error.response?.data?.message || "Failed to check authentication status");
-      }
+      console.error("getAuthState error:", error.response?.data || error.message);
       setIsLogin(false);
-      localStorage.removeItem("isLoggedIn");
       setUserData(null);
     }
   };
@@ -53,77 +41,57 @@ export const AppContextProvider = (props) => {
         withCredentials: true,
       });
       console.log("User data response:", data);
-      if (data.success) {
-        console.log("Setting userData:", data.userData);
-        return data.userData;
-      } else {
-        toast.error(data.message || "Failed to fetch user data");
-        return null;
-      }
+      return data.success ? data.userData : null;
     } catch (error) {
-      console.error("getUserData error:", error.response?.data?.message || error.message);
-      toast.error(error.response?.data?.message || "Failed to fetch user data");
+      console.error("getUserData error:", error.response?.data || error.message);
       return null;
     }
   };
 
   const login = async (credentials) => {
     try {
-      console.log("Attempting login with credentials:", credentials);
+      console.log("Attempting login with:", credentials);
       const { data } = await axios.post(`${backendUrl}/api/auth/login`, credentials, {
         withCredentials: true,
       });
+      console.log("Login response:", data);
       if (data.success) {
-        localStorage.setItem("isLoggedIn", "true");
         setIsLogin(true);
-        console.log("Login successful, setting userData:", data.user);
         setUserData(data.user);
+        return { success: true, user: data.user };
       } else {
-        throw new Error(data.message);
+        throw new Error(data.message || "Login failed");
       }
     } catch (error) {
+      console.error("Login error:", error.response?.data || error.message);
       toast.error(error.response?.data?.message || "Login failed");
-      console.error("Login error:", error);
+      return { success: false, message: error.response?.data?.message || "Login failed" };
     }
   };
 
   const logout = async () => {
     try {
-      console.log("Logging out with URL:", `${backendUrl}/api/auth/logout`);
-      const response = await axios.post(`${backendUrl}/api/auth/logout`, {}, { withCredentials: true });
-      console.log("Logout response:", response.data);
-      localStorage.removeItem("isLoggedIn");
-      localStorage.removeItem("token");
+      console.log("Logging out at:", `${backendUrl}/api/auth/logout`);
+      await axios.post(`${backendUrl}/api/auth/logout`, {}, { withCredentials: true });
       setIsLogin(false);
       setUserData(null);
-      toast.success("Logged out successfully");
-      window.location.href = "/login";
+      navigate("/login"); // Use navigate instead of window.location.href
+      toast.success("Logged out successfully!");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Logout failed");
-      console.error("Logout error:", error);
+      console.error("Logout error:", error.response?.data || error.message);
+      toast.error("Logout failed");
     }
   };
-
-  useEffect(() => {
-    console.log("isLogin updated to:", isLogin);
-    localStorage.setItem("isLoggedIn", isLogin);
-  }, [isLogin]);
 
   useEffect(() => {
     getAuthState();
   }, []);
 
-  const value = {
-    backendUrl,
-    isLogin,
-    setIsLogin,
-    userData,
-    setUserData,
-    getAuthState,
-    getUserData,
-    login,
-    logout,
-  };
-
-  return <AppContext.Provider value={value}>{props.children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider
+      value={{ backendUrl, isLogin, setIsLogin, userData, login, logout, getAuthState }}
+    >
+      {props.children}
+    </AppContext.Provider>
+  );
 };
