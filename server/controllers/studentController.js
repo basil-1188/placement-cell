@@ -1,7 +1,6 @@
 import { userModel, studentModel } from "../models/userModel.js";
 import { uploadToCloudinary } from "../utils/Cloudinary.js";
 
-// Add or update student details
 export const addStudentDetails = async (req, res) => {
   try {
     console.log("addStudentDetails - req.user:", req.user);
@@ -24,18 +23,15 @@ export const addStudentDetails = async (req, res) => {
       pgMarks,
     } = req.body;
 
-    // Validate required fields
     if (!admnNo || !phoneNo || !dob || !address || !degree || !degreeCgpa || !plustwoPercent || !tenthPercent) {
       return res.status(400).json({ success: false, message: "All required fields must be provided" });
     }
 
-    // Validate phone number
     const phoneRegex = /^\d{10}$/;
     if (!phoneRegex.test(phoneNo)) {
       return res.status(400).json({ success: false, message: "Phone number must be a 10-digit number" });
     }
 
-    // Validate date of birth
     const dobDate = new Date(dob);
     const today = new Date();
     let age = today.getFullYear() - dobDate.getFullYear();
@@ -47,7 +43,6 @@ export const addStudentDetails = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid date of birth or user must be at least 18 years old" });
     }
 
-    // Validate academic scores
     const cgpa = parseFloat(degreeCgpa);
     const plusTwo = parseFloat(plustwoPercent);
     const tenth = parseFloat(tenthPercent);
@@ -61,12 +56,10 @@ export const addStudentDetails = async (req, res) => {
       return res.status(400).json({ success: false, message: "Tenth percentage must be a number between 0 and 100" });
     }
 
-    // Validate GitHub profile URL
     if (githubProfile && !/^https?:\/\/(www\.)?github\.com\/[A-Za-z0-9_-]+$/.test(githubProfile)) {
       return res.status(400).json({ success: false, message: "Invalid GitHub profile URL" });
     }
 
-    // Validate postgraduate marks
     let parsedPgMarks = [];
     if (pgMarks) {
       parsedPgMarks = JSON.parse(pgMarks);

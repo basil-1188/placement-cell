@@ -1,6 +1,6 @@
 import React from "react";
 import { Route, Routes } from "react-router-dom";
-import { AppContextProvider } from "./context/AppContext";
+import { AppContextProvider, AppContext } from "./context/AppContext";
 import Home from "./pages/common/Home";
 import Blogs from "./pages/common/Blogs";
 import Profile from "./pages/user/Profile";
@@ -22,7 +22,12 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import StudentDetailsForm from "./pages/user/StudentDetailsForm";
 import { useContext } from "react";
-import { AppContext } from "./context/AppContext";
+import UpdateRoles from "./pages/admin/UpdateRoles";
+import AllStudents from "./pages/admin/AllStudents";
+import OfficerLayout from "./Layouts/OfficerLayout";
+import TeamLayout from "./Layouts/TeamLayout";
+import OfficerProfile from "./pages/placement_officer/OfficerProfile";
+import TeamProfile from "./pages/trainingteam/TeamProfile";
 
 const App = () => {
   return (
@@ -50,12 +55,19 @@ const App = () => {
             </Route>
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
+              <Route path="manage-users/update-roles" element={<UpdateRoles />} />
+              <Route path="manage-users/all-studentdetails" element={<AllStudents />} />
+            </Route>
+            <Route path="/officer" element={<OfficerLayout />}>
+              <Route path="profile" element={<OfficerProfile />} />
+            </Route>
+            <Route path="/team" element={<TeamLayout />}>
+              <Route path="profile" element={<TeamProfile />} />
             </Route>
           </Routes>
         </main>
 
-        {/* Footer - Common for all */}
-        <Footers />
+        <FooterSelector />
       </div>
     </AppContextProvider>
   );
@@ -77,9 +89,29 @@ const NavbarSelector = () => {
     case "training_team":
       return <TeamNavbar />;
     case "admin":
-      return null; // Admin pages may have their own header inside AdminLayout
+      return null; 
     default:
       return <Navbar />;
+  }
+};
+
+const FooterSelector = () => {
+  const { userData } = useContext(AppContext);
+  console.log("FooterSelector - userData:", userData);
+
+  if (!userData) {
+    return <Footers />; 
+  }
+
+  switch (userData.role) {
+    case "student":
+    case "placement_officer":
+    case "training_team":
+      return <Footers />; 
+    case "admin":
+      return null; 
+    default:
+      return <Footers />; 
   }
 };
 

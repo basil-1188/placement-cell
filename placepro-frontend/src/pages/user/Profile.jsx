@@ -19,7 +19,6 @@ const Profile = () => {
   const [studentDetails, setStudentDetails] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch detailed student information from the backend
   useEffect(() => {
     const fetchStudentDetails = async () => {
       try {
@@ -60,7 +59,6 @@ const Profile = () => {
     }
   }, [backendUrl, userData, navigate]);
 
-  // Use userData.profileImage directly, with a default fallback
   const defaultProfileImage = "https://via.placeholder.com/150?text=Profile+Image";
   const profileImageUrl = userData?.profileImage || defaultProfileImage;
   console.log("Profile - profileImageUrl:", profileImageUrl);
@@ -116,7 +114,7 @@ const Profile = () => {
           <div className="text-center text-gray-600 text-lg animate-pulse">Loading profile...</div>
         ) : studentDetails ? (
           <div className="relative bg-gradient-to-br from-purple-900 via-blue-900 to-gray-900 bg-opacity-90 backdrop-blur-lg shadow-2xl rounded-xl p-8 border border-gray-200 overflow-hidden">
-            {/* Background Effects inside the card */}
+
             <div className="absolute inset-0 z-0">
               <div className="absolute w-48 h-48 bg-purple-500 opacity-20 rounded-full blur-2xl top-4 left-4 animate-pulse"></div>
               <div className="absolute w-48 h-48 bg-blue-500 opacity-20 rounded-full blur-2xl bottom-4 right-4 animate-pulse delay-1000"></div>
@@ -124,7 +122,7 @@ const Profile = () => {
             </div>
 
             <div className="relative z-10">
-              {/* Centered Profile Image */}
+
               <motion.div
                 className="flex justify-center mb-8"
                 initial={{ scale: 0.9, opacity: 0 }}
@@ -142,7 +140,6 @@ const Profile = () => {
                 />
               </motion.div>
 
-              {/* User Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-200">
                 <div className="flex items-center p-3 bg-gray-800 bg-opacity-50 rounded-lg shadow-sm">
                   <FaUser className="text-purple-400 mr-4 text-xl" />

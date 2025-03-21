@@ -6,6 +6,8 @@ import connectDB from './config/mongodb.js'
 import authRouter from './routes/authRoutes.js'
 import userRouter from './routes/userRoutes.js'
 import adminRouter from './routes/adminRoutes.js'
+import officerRouter from './routes/officerRoutes.js'
+import teamRouter from './routes/teamRoutes.js'
 
 const app = express()
 const port = process.env.PORT || 4000
@@ -23,5 +25,7 @@ app.get('/', (req, res) => res.send('API working fine'))
 app.use('/api/auth', authRouter)
 app.use('/api/user',userRouter)
 app.use('/api/admin', adminRouter )
+app.use('/api/officer',officerRouter)
+app.use('/api/team',teamRouter)
 
 app.listen(port, () => console.log(`server started on PORT: ${port}`));

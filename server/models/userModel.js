@@ -35,22 +35,21 @@ const studentSchema = new mongoose.Schema(
     plustwoPercent: { type: String, required: true },
     tenthPercent: { type: String, required: true },
     pgMarks: [
-        {
-          semester: {
-            type: Number,
-            required: true,
-            unique: true, 
-            min: 1,
-            max: 4, 
-          },
-          cgpa: {
-            type: Number, 
-            required: false, 
-            min: 0,
-            max: 10, 
-          },
+      {
+        semester: {
+          type: Number,
+          required: true,
+          min: 1,
+          max: 4, 
         },
-      ],
+        cgpa: {
+          type: Number,
+          required: false,
+          min: 0,
+          max: 10,
+        },
+      },
+    ],
     resume: { type: String },
     githubProfile: { type: String },
   },

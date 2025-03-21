@@ -1,4 +1,3 @@
-// src/components/navbars/TeamNavbar.jsx
 import React, { useState, useEffect, useContext, useMemo } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
 import { Link } from "react-router-dom";
@@ -6,7 +5,7 @@ import logo from "../../assets/logo.png";
 import { AppContext } from "../../context/AppContext";
 
 const TeamNavbar = () => {
-  const { userData, backendUrl, logout } = useContext(AppContext);
+  const { userData, logout } = useContext(AppContext);
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownStates, setDropdownStates] = useState({});
 
@@ -38,7 +37,7 @@ const TeamNavbar = () => {
       ];
     }
     return [];
-  }, [userData]); // Dependency: userData
+  }, [userData]);
 
   useEffect(() => {
     const initialDropdownStates = {};
@@ -84,14 +83,7 @@ const TeamNavbar = () => {
                   {dropdownStates[item.path] && (
                     <ul className="absolute left-0 mt-2 w-48 bg-white shadow-md rounded-md">
                       {item.dropdown.map((dropdownItem) => (
-                        <li
-                          key={dropdownItem.path}
-                          className="dropdown-item"
-                          style={{
-                            display:
-                              dropdownItem.condition === false ? "none" : "block",
-                          }}
-                        >
+                        <li key={dropdownItem.path} className="dropdown-item">
                           <Link
                             to={dropdownItem.path}
                             className="block px-4 py-2 hover:bg-gray-100"
@@ -125,18 +117,11 @@ const TeamNavbar = () => {
               {dropdownStates["user-dropdown"] && (
                 <div className="absolute right-0 mt-2 w-48 bg-white shadow-md rounded-md">
                   <Link
-                    to="/user/profile"
+                    to="/team/profile"
                     className="block px-4 py-2 hover:bg-gray-100"
                     onClick={() => toggleDropdown("user-dropdown")}
                   >
                     Profile
-                  </Link>
-                  <Link
-                    to="/user/upload-details"
-                    className="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                    onClick={() => toggleDropdown("user-dropdown")}
-                  >
-                    Upload Details
                   </Link>
                   <button
                     onClick={() => {
@@ -185,14 +170,7 @@ const TeamNavbar = () => {
                   {dropdownStates[item.path] && (
                     <ul className="mt-2 w-48 bg-white shadow-md rounded-md">
                       {item.dropdown.map((dropdownItem) => (
-                        <li
-                          key={dropdownItem.path}
-                          className="dropdown-item"
-                          style={{
-                            display:
-                              dropdownItem.condition === false ? "none" : "block",
-                          }}
-                        >
+                        <li key={dropdownItem.path} className="dropdown-item">
                           <Link
                             to={dropdownItem.path}
                             className="block px-4 py-2 hover:bg-gray-100"
@@ -224,20 +202,11 @@ const TeamNavbar = () => {
             <>
               <li>
                 <Link
-                  to="/user/profile"
+                  to="/team/profile"
                   className="hover:text-blue-500"
                   onClick={() => setIsOpen(false)}
                 >
                   Profile
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/user/upload-details"
-                  className="hover:text-blue-500"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Upload Details
                 </Link>
               </li>
               <li>
