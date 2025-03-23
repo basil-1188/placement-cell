@@ -34,7 +34,7 @@ const OfficerNavbar = () => {
           ],
         },
         { path: "/job-openings", label: "JOB OPENINGS" },
-        { path: "/rank-students", label: "RANK STUDENTS" },
+        { path: "/officer/student-details", label: "STUDENTS LIST" },
       ];
     }
     return [];

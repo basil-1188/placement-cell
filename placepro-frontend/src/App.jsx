@@ -29,6 +29,7 @@ import TeamProfile from "./pages/trainingteam/TeamProfile";
 import CreateTest from "./pages/placement_officer/CreateTest";
 import TakeTest from "./pages/user/TakeTest";
 import TakeTestList from "./pages/user/TakeTestList";
+import StudentLists from "./pages/placement_officer/StudentLists";
 
 const App = () => {
   return (
@@ -69,6 +70,7 @@ const App = () => {
             <Route path="/officer" element={<OfficerLayout />}>
               <Route path="profile" element={<OfficerProfile />} />
               <Route path="create-test" element={<CreateTest />} />
+              <Route path="student-details" element={<StudentLists />} />
             </Route>
             <Route path="/team" element={<TeamLayout />}>
               <Route path="profile" element={<TeamProfile />} />

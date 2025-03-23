@@ -1,4 +1,4 @@
-import { userModel,mockTestModel } from "../models/userModel.js";
+import { userModel,mockTestModel,studentModel } from "../models/userModel.js";
 
 export const getOfficerProfile = async (req, res) => {
   try {
@@ -121,5 +121,65 @@ export const addQuestions = async (req, res) => {
       message: "Server error while creating mock test",
       error: error.message 
     });
+  }
+};
+
+export const getFullStudentDetailsForOfficer = async (req, res) => {
+  try {
+    console.log("Fetching all student details for officer: ", req.user);
+    const officer = await userModel.findById(req.user?._id);
+    if (!officer) {
+      return res.status(401).json({ success: false, message: "Unauthorized: No user data" });
+    }
+    if (officer.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied: Placement officer role required" });
+    }
+
+    const students = await userModel.find({ role: { $eq: "student" } }, "role _id name email profileImage");
+    console.log("Returning student users:", students.length);
+    console.log("Students from userModel:", students);
+
+    const studentIds = students.map(student => student._id);
+    console.log("Student IDs to query studentModel:", studentIds);
+
+    const fullDetails = await studentModel.find(
+      { studentId: { $in: studentIds } },
+      "studentId admnNo phoneNo dob address degree degreeCgpa plustwoPercent tenthPercent pgMarks resume githubProfile"
+    );
+    console.log("Full Details from studentModel:", fullDetails);
+
+    const responseData = students.map(student => {
+      const details = fullDetails.find(detail => 
+        detail.studentId && detail.studentId.toString() === student._id.toString()
+      );
+      console.log(`Matching student _id: ${student._id} with studentId: ${details ? details.studentId : 'no match'}`);
+      console.log(`PG Marks for ${student._id}: ${details ? JSON.stringify(details.pgMarks) : 'undefined'}`);
+      return {
+        _id: student._id,
+        role: student.role,
+        name: student.name,
+        email: student.email,
+        profileImage: student.profileImage,
+        ...(details && {
+          admnNo: details.admnNo,
+          phoneNo: details.phoneNo,
+          dob: details.dob,
+          address: details.address,
+          degree: details.degree,
+          degreeCgpa: details.degreeCgpa,
+          plustwoPercent: details.plustwoPercent,
+          tenthPercent: details.tenthPercent,
+          pgMarks: details.pgMarks || [],
+          resume: details.resume || 'N/A',
+          githubProfile: details.githubProfile || 'N/A',
+        }),
+      };
+    });
+
+    console.log("Final Response Data:", responseData);
+    res.status(200).json({ success: true, students: responseData });
+  } catch (error) {
+    console.error("getFullStudentDetailsForOfficer error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };
