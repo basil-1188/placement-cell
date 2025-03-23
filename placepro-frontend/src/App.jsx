@@ -5,8 +5,6 @@ import Home from "./pages/common/Home";
 import Blogs from "./pages/common/Blogs";
 import Profile from "./pages/user/Profile";
 import Results from "./pages/user/Results";
-import MockTest from "./pages/user/MockTest";
-import UserDashboard from "./pages/user/UserDashboard";
 import Dashboard from "./pages/admin/Dashboard";
 import AdminLayout from "./Layouts/AdminLayout";
 import UserLayout from "./Layouts/UserLayout";
@@ -28,6 +26,9 @@ import OfficerLayout from "./Layouts/OfficerLayout";
 import TeamLayout from "./Layouts/TeamLayout";
 import OfficerProfile from "./pages/placement_officer/OfficerProfile";
 import TeamProfile from "./pages/trainingteam/TeamProfile";
+import CreateTest from "./pages/placement_officer/CreateTest";
+import TakeTest from "./pages/user/TakeTest";
+import TakeTestList from "./pages/user/TakeTestList";
 
 const App = () => {
   return (
@@ -46,13 +47,20 @@ const App = () => {
             <Route path="/about_us" element={<AboutUs />} />
             <Route path="/login" element={<AuthForm />} />
             <Route path="/register" element={<AuthForm />} />
+
+
             <Route path="/user" element={<UserLayout />}>
-              <Route index element={<UserDashboard />} />
+              <Route index element={<Home />} />
               <Route path="profile" element={<Profile />} />
               <Route path="upload-details" element={<StudentDetailsForm />} />
-              <Route path="results" element={<Results />} />
-              <Route path="mock-test" element={<MockTest />} />
+              <Route path="mock-tests">
+                  <Route path="take-test" element={<TakeTestList />} />
+                  <Route path="take-test/:id" element={<TakeTest />} />
+                  {/* <Route path="marks" element={<Results />} /> Uncommented */}
+                </Route>
             </Route>
+
+
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="manage-users/update-roles" element={<UpdateRoles />} />
@@ -60,6 +68,7 @@ const App = () => {
             </Route>
             <Route path="/officer" element={<OfficerLayout />}>
               <Route path="profile" element={<OfficerProfile />} />
+              <Route path="create-test" element={<CreateTest />} />
             </Route>
             <Route path="/team" element={<TeamLayout />}>
               <Route path="profile" element={<TeamProfile />} />

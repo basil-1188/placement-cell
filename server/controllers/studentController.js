@@ -1,4 +1,4 @@
-import { userModel, studentModel } from "../models/userModel.js";
+import { userModel, studentModel,mockTestModel,mockTestResultModel } from "../models/userModel.js";
 import { uploadToCloudinary } from "../utils/Cloudinary.js";
 
 export const addStudentDetails = async (req, res) => {
@@ -142,5 +142,247 @@ export const getStudentDetails = async (req, res) => {
   } catch (error) {
     console.error("Error fetching student details:", error.message);
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+export const getAvailableMockTests = async (req, res) => {
+  try {
+    const studentId = req.user?._id;
+    if (!studentId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: No user ID found' });
+    }
+
+    const now = new Date();
+    const tests = await mockTestModel.find({
+      isPublished: true,
+      startDate: { $lte: now },
+      lastDayToAttend: { $gte: now },
+    }).select('testName startDate lastDayToAttend maxAttempts description');
+
+    const availableTests = [];
+    for (const test of tests) {
+      const previousAttempts = await mockTestResultModel.countDocuments({
+        studentId,
+        mockTestId: test._id,
+      });
+      if (previousAttempts < test.maxAttempts) {
+        availableTests.push({
+          _id: test._id,
+          testName: test.testName,
+          startDate: test.startDate,
+          lastDayToAttend: test.lastDayToAttend,
+          attemptsRemaining: test.maxAttempts - previousAttempts,
+          description: test.description,
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Available mock tests retrieved successfully',
+      data: availableTests,
+    });
+  } catch (error) {
+    console.error('Error in getAvailableMockTests:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching available tests',
+      error: error.message,
+    });
+  }
+};
+export const attendMockTest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const studentId = req.user?._id;
+
+    if (!studentId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: No user ID found' });
+    }
+
+    const test = await mockTestModel.findById(id);
+    if (!test) {
+      return res.status(404).json({ success: false, message: 'Test not found' });
+    }
+
+    if (!test.isPublished) {
+      return res.status(403).json({ success: false, message: 'This test is not yet published' });
+    }
+
+    const now = new Date();
+    const startDate = new Date(test.startDate);
+    const lastDayToAttend = new Date(test.lastDayToAttend);
+
+    if (now < startDate) {
+      return res.status(403).json({
+        success: false,
+        message: `This test is not available yet. It starts on ${startDate.toLocaleDateString()}`,
+      });
+    }
+
+    if (now > lastDayToAttend) {
+      return res.status(403).json({
+        success: false,
+        message: `This test is no longer available. It ended on ${lastDayToAttend.toLocaleDateString()}`,
+      });
+    }
+
+    const previousAttempts = await mockTestResultModel.countDocuments({
+      studentId,
+      mockTestId: id,
+    });
+
+    if (previousAttempts >= test.maxAttempts) {
+      return res.status(403).json({
+        success: false,
+        message: `You have exceeded the maximum attempts (${test.maxAttempts}) for this test`,
+      });
+    }
+
+    const testDetails = {
+      testName: test.testName,
+      testType: test.testType,
+      questions: test.questions.map((q) => ({
+        _id: q._id,
+        type: q.type,
+        text: q.text,
+        ...(q.type === 'mcq' ? { options: q.options } : { codingDetails: { testCases: q.codingDetails.testCases } }),
+      })),
+      timeLimit: test.timeLimit,
+      startDate: test.startDate,
+      lastDayToAttend: test.lastDayToAttend,
+      description: test.description,
+      maxAttempts: test.maxAttempts,
+      passMark: test.passMark,
+      totalQuestions: test.questions.length,
+    };
+
+    res.status(200).json({
+      success: true,
+      message: 'Test loaded successfully',
+      data: testDetails,
+    });
+  } catch (error) {
+    console.error('Error in attendMockTest:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while loading test',
+      error: error.message,
+    });
+  }
+};
+
+export const submitMockTest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const studentId = req.user?._id;
+    const { answers, timeTaken, startedAt } = req.body;
+
+    if (!studentId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: No user ID found' });
+    }
+
+    if (!answers || typeof answers !== 'object' || !timeTaken || !startedAt) {
+      return res.status(400).json({ success: false, message: 'Answers, timeTaken, and startedAt are required' });
+    }
+
+    const test = await mockTestModel.findById(id);
+    if (!test) {
+      return res.status(404).json({ success: false, message: 'Test not found' });
+    }
+
+    const previousAttempts = await mockTestResultModel.countDocuments({
+      studentId,
+      mockTestId: id,
+    });
+
+    if (previousAttempts >= test.maxAttempts) {
+      return res.status(403).json({
+        success: false,
+        message: `You have exceeded the maximum attempts (${test.maxAttempts}) for this test`,
+      });
+    }
+
+    let mark = 0;
+    let wrongAnswers = 0;
+    let notAnswered = 0;
+    const totalQuestions = test.questions.length;
+    const questionsAnswered = [];
+
+    test.questions.forEach((question, idx) => {
+      const studentAnswer = answers[idx.toString()];
+      const answerObj = { questionIndex: idx, isCorrect: false };
+
+      if (question.type === 'mcq') {
+        answerObj.selectedAnswer = studentAnswer || null; // Null for unanswered MCQs
+        if (studentAnswer) {
+          answerObj.isCorrect = studentAnswer === question.correctAnswer;
+          if (answerObj.isCorrect) mark += 1;
+          else wrongAnswers += 1;
+        } else {
+          notAnswered += 1;
+        }
+      } else if (question.type === 'coding') {
+        answerObj.codingAnswer = studentAnswer || null; // Null for unanswered coding
+        if (studentAnswer) {
+          const testCaseResults = question.codingDetails.testCases.map((tc) => ({
+            input: tc.input,
+            output: tc.output,
+            passed: false, // Replace with actual evaluation logic
+          }));
+          answerObj.testCaseResults = testCaseResults;
+          answerObj.isCorrect = testCaseResults.every(() => true); // Placeholder
+          if (answerObj.isCorrect) mark += 1;
+          else wrongAnswers += 1;
+        } else {
+          answerObj.testCaseResults = []; // Empty array for unanswered coding
+          notAnswered += 1;
+        }
+      }
+
+      questionsAnswered.push(answerObj);
+    });
+
+    const percentage = (mark / totalQuestions) * 100;
+    const passed = mark >= test.passMark;
+
+    const result = new mockTestResultModel({
+      studentId,
+      mockTestId: id,
+      mark,
+      timeTaken,
+      questionsAnswered,
+      notAnswered,
+      wrongAnswers,
+      totalQuestions,
+      completedAt: new Date(),
+      status: 'completed',
+      attemptNumber: previousAttempts + 1,
+      percentage,
+      passed,
+      startedAt: new Date(startedAt),
+      feedback: passed ? 'Good job!' : 'Review your answers and try again.',
+    });
+
+    // Populate mockTestId before saving to ensure validation works
+    await result.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Test submitted successfully',
+      data: {
+        mark,
+        totalQuestions,
+        percentage,
+        passed,
+        attemptNumber: previousAttempts + 1,
+      },
+    });
+  } catch (error) {
+    console.error('Error in submitMockTest:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while submitting test',
+      error: error.message,
+    });
   }
 };

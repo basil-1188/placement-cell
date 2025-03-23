@@ -1,12 +1,12 @@
-// src/components/navbars/StudentNavbar.jsx
 import React, { useState, useEffect, useContext, useMemo } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Add useNavigate
 import logo from "../../assets/logo.png";
 import { AppContext } from "../../context/AppContext";
 
 const StudentNavbar = () => {
   const { userData, backendUrl, logout } = useContext(AppContext);
+  const navigate = useNavigate(); // Add this for logout navigation
   const [isOpen, setIsOpen] = useState(false);
   const [hasTest, setHasTest] = useState(false);
   const [dropdownStates, setDropdownStates] = useState({});
@@ -41,7 +41,7 @@ const StudentNavbar = () => {
           dropdown: [
             { path: "/mock-tests/marks", label: "Past Results" },
             { path: "/mock-tests/ranks", label: "Leaderboard Rankings" },
-            { path: "/mock-tests/new-test", label: "Take Scheduled Test", condition: hasTest },
+            { path: "/user/mock-tests/take-test", label: "Take Test" }, // Fix path here
           ],
         },
         {
@@ -57,7 +57,7 @@ const StudentNavbar = () => {
       ];
     }
     return [];
-  }, [userData, hasTest]); // Dependencies: userData, hasTest
+  }, [userData, hasTest]);
 
   useEffect(() => {
     const initialDropdownStates = {};
@@ -161,7 +161,7 @@ const StudentNavbar = () => {
                     onClick={() => {
                       logout();
                       toggleDropdown("user-dropdown");
-                      navigate("/login"); // Add this
+                      navigate("/login");
                     }}
                     className="block px-4 py-2 w-full text-left hover:bg-gray-100"
                   >
@@ -261,16 +261,16 @@ const StudentNavbar = () => {
                 </Link>
               </li>
               <li>
-              <button
-                onClick={() => {
-                  logout();
-                  setIsOpen(false);
-                  navigate("/login"); // Add this
-                }}
-                className="hover:text-red-500"
-              >
-                Logout
-              </button>
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsOpen(false);
+                    navigate("/login");
+                  }}
+                  className="hover:text-red-500"
+                >
+                  Logout
+                </button>
               </li>
             </>
           )}
