@@ -30,7 +30,7 @@ const OfficerNavbar = () => {
             { path: "/officer/create-test", label: "Add Test" },
             { path: "/officer/mock-test-results", label: "Check Results" },
             { path: "/officer/mock-test-attendees", label: "See Attendees" },
-            { path: "/officer/mock-tests", label: "View All Tests" },
+            { path: "/officer/view-all-test", label: "View All Tests" },
           ],
         },
         { path: "/job-openings", label: "JOB OPENINGS" },

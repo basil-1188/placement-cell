@@ -1,9 +1,9 @@
-import { userModel,mockTestModel,studentModel } from "../models/userModel.js";
+import { userModel,mockTestModel,studentModel, mockTestResultModel } from "../models/userModel.js";
 
 export const getOfficerProfile = async (req, res) => {
   try {
     const userId = req.user?._id; 
-    console.log("getOfficerProfile - userId:", userId); // Add this log
+    console.log("getOfficerProfile - userId:", userId); 
     if (!userId) {
       return res.status(401).json({ success: false, message: "Unauthorized: No user ID found" });
     }
@@ -180,6 +180,157 @@ export const getFullStudentDetailsForOfficer = async (req, res) => {
     res.status(200).json({ success: true, students: responseData });
   } catch (error) {
     console.error("getFullStudentDetailsForOfficer error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const viewAllTest = async (req, res) => {
+  try {
+    console.log("Fetching TEST details from the database", req.user);
+    const officer = await userModel.findById(req.user?._id);
+    if (!officer) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: No user data' });
+    }
+    if (officer.role !== 'placement_officer') {
+      return res.status(403).json({ success: false, message: "Access denied: Placement officer role required" });
+    }
+
+    const mocktests = await mockTestModel.find(
+      {},
+      'testName testType isPublished questions startDate lastDayToAttend timeLimit maxAttempts passMark'
+    ).lean(); 
+
+    console.log("Mock tests fetched:", mocktests.length);
+    res.status(200).json({ success: true, tests: mocktests });
+  } catch (error) {
+    console.error("viewAllTest error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const publishTest = async (req, res) => {
+  try {
+    const { testId } = req.params; 
+    console.log("Attempting to publish test with ID:", testId);
+
+    const officer = await userModel.findById(req.user?._id);
+    if (!officer) {
+      return res.status(401).json({ success: false, message: "Unauthorized: No user data" });
+    }
+    if (officer.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied: Placement officer role required" });
+    }
+
+    const test = await mockTestModel.findByIdAndUpdate(
+      testId,
+      { isPublished: true },
+      { new: true } 
+    );
+
+    if (!test) {
+      return res.status(404).json({ success: false, message: "Test not found" });
+    }
+
+    console.log("Test published successfully:", test.testName);
+    res.status(200).json({ success: true, message: "Test published successfully", test });
+  } catch (error) {
+    console.error("publishTest error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+export const checkAttendees = async (req, res) => {
+  try {
+    console.log("Fetching attendees for officer:", req.user);
+
+    const officer = await userModel.findById(req.user?._id);
+    if (!officer) {
+      return res.status(401).json({ success: false, message: "Unauthorized: No user data" });
+    }
+    if (officer.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied: Placement officer role required" });
+    }
+
+    const attendedStudents = await mockTestResultModel
+      .find({}, "studentId completedAt mockTestId")
+      .populate("studentId", "name email") 
+      .populate("mockTestId", "testName")   
+      .lean();
+
+    console.log("Attended students count:", attendedStudents.length);
+
+    const allStudents = await userModel
+      .find({ role: "student" }, "_id name email")
+      .lean();
+
+    console.log("Total students count:", allStudents.length);
+
+    const attendedStudentIds = new Set(attendedStudents.map(result => result.studentId._id.toString()));
+    const notAttendedStudents = allStudents.filter(
+      student => !attendedStudentIds.has(student._id.toString())
+    );
+
+    console.log("Students not attended count:", notAttendedStudents.length);
+
+    const responseData = {
+      attended: attendedStudents.map(result => ({
+        studentId: result.studentId._id,
+        studentName: result.studentId.name,
+        studentEmail: result.studentId.email,
+        mockTestId: result.mockTestId._id,
+        testName: result.mockTestId.testName,
+        completedAt: result.completedAt
+      })),
+      notAttended: notAttendedStudents.map(student => ({
+        studentId: student._id,
+        studentName: student.name,
+        studentEmail: student.email
+      })),
+      totalAttended: attendedStudents.length,
+      totalNotAttended: notAttendedStudents.length,
+      totalStudents: allStudents.length
+    };
+
+    res.status(200).json({ success: true, data: responseData });
+  } catch (error) {
+    console.error("checkAttendees error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const checkResults = async (req, res) => {
+  try {
+    const officer = await userModel.findById(req.user?._id);
+    if (!officer) {
+      return res.status(401).json({ success: false, message: "Unauthorized: No user data" });
+    }
+    if (officer.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    const testResults = await mockTestResultModel
+      .find({}, "studentId completedAt mockTestId mark") // Use "mark" here
+      .populate("studentId", "name email")
+      .populate("mockTestId", "testName")
+      .lean();
+
+    const allStudents = await userModel.find({ role: "student" }, "_id").lean();
+
+    const responseData = {
+      tests: testResults.map((result) => ({
+        studentId: result.studentId._id.toString(),
+        studentName: result.studentId.name,
+        studentEmail: result.studentId.email,
+        mockTestId: result.mockTestId._id.toString(),
+        testName: result.mockTestId.testName,
+        marks: result.mark, // Map "mark" to "marks"
+        completedAt: result.completedAt,
+      })),
+      totalStudents: allStudents.length,
+    };
+
+    res.status(200).json({ success: true, data: responseData });
+  } catch (error) {
+    console.error("checkResults error:", error.stack);
     res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };

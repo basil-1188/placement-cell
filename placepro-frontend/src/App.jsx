@@ -30,6 +30,9 @@ import CreateTest from "./pages/placement_officer/CreateTest";
 import TakeTest from "./pages/user/TakeTest";
 import TakeTestList from "./pages/user/TakeTestList";
 import StudentLists from "./pages/placement_officer/StudentLists";
+import ViewAllTest from "./pages/placement_officer/ViewAllTest";
+import MockTestAttendees from "./pages/placement_officer/MockTestAttendees";
+import MockTestResults from "./pages/placement_officer/MockTestResults";
 
 const App = () => {
   return (
@@ -71,6 +74,9 @@ const App = () => {
               <Route path="profile" element={<OfficerProfile />} />
               <Route path="create-test" element={<CreateTest />} />
               <Route path="student-details" element={<StudentLists />} />
+              <Route path="view-all-test" element={<ViewAllTest />} />
+              <Route path="mock-test-attendees" element={<MockTestAttendees />} />
+              <Route path="mock-test-results" element={<MockTestResults />} />
             </Route>
             <Route path="/team" element={<TeamLayout />}>
               <Route path="profile" element={<TeamProfile />} />
