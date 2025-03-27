@@ -155,7 +155,7 @@ export const getAvailableMockTests = async (req, res) => {
     const now = new Date();
     const tests = await mockTestModel.find({
       isPublished: true,
-      lastDayToAttend: { $gte: now }, // Show all non-expired tests
+      lastDayToAttend: { $gte: now }, 
     }).select('testName startDate lastDayToAttend maxAttempts description');
 
     const availableTests = [];
@@ -173,7 +173,7 @@ export const getAvailableMockTests = async (req, res) => {
           lastDayToAttend: test.lastDayToAttend,
           attemptsRemaining: test.maxAttempts - previousAttempts,
           description: test.description,
-          isAvailableNow, // New flag
+          isAvailableNow, 
         });
       }
     }
@@ -248,7 +248,6 @@ export const attendMockTest = async (req, res) => {
       });
     }
 
-    // Create an initial result entry when the test is started
     const initialResult = new mockTestResultModel({
       studentId,
       mockTestId: id,
@@ -351,7 +350,7 @@ export const submitMockTest = async (req, res) => {
           const testCaseResults = question.codingDetails.testCases.map((tc) => ({
             input: tc.input,
             output: tc.output,
-            passed: false, // Replace with actual evaluation logic
+            passed: false, 
           }));
           answerObj.testCaseResults = testCaseResults;
           answerObj.isCorrect = testCaseResults.every(() => true); // Placeholder
@@ -369,7 +368,7 @@ export const submitMockTest = async (req, res) => {
     const percentage = (mark / totalQuestions) * 100;
     const passed = mark >= test.passMark;
 
-    // Update the existing result
+
     existingResult.mark = mark;
     existingResult.timeTaken = timeTaken;
     existingResult.questionsAnswered = questionsAnswered;
@@ -402,5 +401,181 @@ export const submitMockTest = async (req, res) => {
       message: 'Server error while submitting test',
       error: error.message,
     });
+  }
+};
+
+export const pastResults = async (req, res) => {
+  const studentId = req.user?._id;
+  if (!studentId) {
+    return res.status(401).json({ success: false, message: 'Unauthorized: No user ID found' });
+  }
+
+  try {
+    const testResults = await mockTestResultModel
+      .find({ studentId }) 
+      .populate("mockTestId", "testName questions passMark timeLimit") 
+      .lean();
+
+    if (!testResults || testResults.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        message: 'No past test results found for this student',
+      });
+    }
+
+    const pastResultsData = testResults.map((result) => {
+      const totalQuestions = result.mockTestId.questions.length;
+      const fullMarks = totalQuestions; 
+      return {
+        testName: result.mockTestId.testName,
+        marks: result.mark,
+        totalQuestions,
+        fullMarks,
+        passMark: result.mockTestId.passMark,
+        percentage: result.percentage,
+        passed: result.passed,
+        timeTaken: result.timeTaken, 
+        completedAt: result.completedAt,
+        attemptNumber: result.attemptNumber,
+        timeLimit: result.mockTestId.timeLimit, 
+        notAnswered: result.notAnswered,
+        wrongAnswers: result.wrongAnswers,
+        questionsAnswered: result.questionsAnswered.map((qa) => ({
+          questionIndex: qa.questionIndex,
+          selectedAnswer: qa.selectedAnswer,
+          codingAnswer: qa.codingAnswer,
+          isCorrect: qa.isCorrect,
+          testCaseResults: qa.testCaseResults, 
+        })),
+        startedAt: result.startedAt,
+        feedback: result.feedback || 'No feedback provided',
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: pastResultsData,
+      message: 'Past test results retrieved successfully',
+    });
+  } catch (error) {
+    console.error("pastResults error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+export const getRanks = async (req, res) => {
+  try {
+    const testResults = await mockTestResultModel
+      .find({}, "studentId mark mockTestId completedAt passed")
+      .populate("studentId", "name email")
+      .populate("mockTestId", "testName questions") 
+      .lean();
+
+    if (!testResults || testResults.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: { overallRankings: [], testRankings: {} },
+        message: "No test results available for ranking",
+      });
+    }
+
+    const overallRankings = testResults
+      .reduce((acc, result) => {
+        const studentId = result.studentId._id.toString();
+        const totalMarks = result.mockTestId.questions.length; 
+        const percentage = (result.mark / totalMarks) * 100;
+        const existing = acc.find((s) => s.studentId === studentId);
+        if (existing) {
+          existing.totalMarks += result.mark;
+          existing.testsTaken += 1;
+          existing.percentages.push(percentage);
+          existing.latestCompletedAt = result.completedAt > existing.latestCompletedAt
+            ? result.completedAt
+            : existing.latestCompletedAt;
+        } else {
+          acc.push({
+            studentId,
+            studentName: result.studentId.name,
+            studentEmail: result.studentId.email,
+            totalMarks: result.mark,
+            testsTaken: 1,
+            percentages: [percentage],
+            latestCompletedAt: result.completedAt,
+          });
+        }
+        return acc;
+      }, [])
+      .map((student) => ({
+        ...student,
+        averagePercentage: (student.percentages.reduce((a, b) => a + b, 0) / student.testsTaken).toFixed(2),
+      }))
+      .sort((a, b) => b.averagePercentage - a.averagePercentage)
+      .map((student, index) => ({
+        rank: index + 1,
+        studentName: student.studentName,
+        studentEmail: student.studentEmail,
+        totalMarks: student.totalMarks,
+        testsTaken: student.testsTaken,
+        averagePercentage: student.averagePercentage,
+        latestCompletedAt: student.latestCompletedAt,
+      }));
+
+    const testRankingsMap = testResults.reduce((acc, result) => {
+      const testId = result.mockTestId._id.toString();
+      const testName = result.mockTestId.testName;
+      if (!acc[testId]) {
+        acc[testId] = { testName, results: [] };
+      }
+      const studentId = result.studentId._id.toString();
+      const totalMarks = result.mockTestId.questions.length;
+      const existing = acc[testId].results.find((s) => s.studentId === studentId);
+      if (existing) {
+        if (result.mark > existing.mark) {
+          existing.mark = result.mark;
+          existing.completedAt = result.completedAt;
+          existing.percentage = (result.mark / totalMarks) * 100;
+        }
+      } else {
+        acc[testId].results.push({
+          studentId,
+          studentName: result.studentId.name,
+          studentEmail: result.studentId.email,
+          mark: result.mark,
+          completedAt: result.completedAt,
+          percentage: (result.mark / totalMarks) * 100,
+        });
+      }
+      return acc;
+    }, {});
+
+    const testRankings = Object.keys(testRankingsMap).reduce((acc, testId) => {
+      acc[testId] = {
+        testName: testRankingsMap[testId].testName,
+        rankings: testRankingsMap[testId].results
+          .sort((a, b) => b.mark - a.mark)
+          .map((student, index) => ({
+            rank: index + 1,
+            studentName: student.studentName,
+            studentEmail: student.studentEmail,
+            mark: student.mark,
+            percentage: student.percentage.toFixed(2),
+            completedAt: student.completedAt,
+          })),
+      };
+      return acc;
+    }, {});
+
+    res.status(200).json({
+      success: true,
+      data: {
+        overallRankings,
+        testRankings,
+      },
+      message: "Leaderboard rankings retrieved successfully",
+    });
+  } catch (error) {
+    console.error("getRanks error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };

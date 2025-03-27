@@ -136,10 +136,10 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    console.log("Clearing token cookie:", req.cookies.token); // Debug current token
+    console.log("Clearing token cookie:", req.cookies.token); 
     res.clearCookie("token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // false for development
+      secure: process.env.NODE_ENV === "production", 
       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
       path: "/", 
     });

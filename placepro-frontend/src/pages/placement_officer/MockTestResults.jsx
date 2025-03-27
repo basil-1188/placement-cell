@@ -54,8 +54,15 @@ const MockTestResults = () => {
     ? (resultsData.tests || [])
         .filter((test) => test.testName === selectedTest)
         .sort((a, b) => b.marks - a.marks)
-        .map((test, index) => ({ ...test, rank: index + 1 }))
+        .map((test, index) => ({
+          ...test,
+          rank: index + 1,
+        }))
     : [];
+
+  const selectedTestDetails = selectedTest
+    ? resultsData.tests.find((test) => test.testName === selectedTest) || {}
+    : {};
 
   const overallRanking = (resultsData.tests || [])
     .reduce((acc, test) => {
@@ -233,7 +240,11 @@ const MockTestResults = () => {
               <div className="bg-white rounded-xl shadow-lg p-8">
                 <div className="flex justify-between items-center mb-8">
                   <h2 className="text-2xl font-semibold text-gray-800">
-                    {selectedTest} - Results
+                    {selectedTest} - Results{' '}
+                    <span className="text-sm text-gray-600">
+                      (Total Questions: {selectedTestDetails.totalQuestions}, Full Marks:{' '}
+                      {selectedTestDetails.fullMarks}, Pass Mark: {selectedTestDetails.passMark})
+                    </span>
                   </h2>
                   <button
                     onClick={() => setSelectedTest(null)}
@@ -253,10 +264,12 @@ const MockTestResults = () => {
                           'Student Name': s.studentName,
                           'Email': s.studentEmail,
                           'Marks': s.marks,
+                          'Percentage': s.percentage,
                           'Completed At': new Date(s.completedAt).toLocaleString(),
+                          'Status': s.passed ? 'Passed' : 'Failed',
                         })),
                         `${selectedTest}_results.csv`,
-                        'Rank,Student Name,Email,Marks,Completed At'
+                        'Rank,Student Name,Email,Marks,Percentage,Completed At,Status'
                       )
                     }
                     className="px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors duration-200"
@@ -281,7 +294,13 @@ const MockTestResults = () => {
                           Marks
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-green-900 uppercase tracking-wider">
+                          Percentage
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-green-900 uppercase tracking-wider">
                           Completed At
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-green-900 uppercase tracking-wider">
+                          Status
                         </th>
                       </tr>
                     </thead>
@@ -304,7 +323,13 @@ const MockTestResults = () => {
                             {student.marks}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {student.percentage}%
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                             {new Date(student.completedAt).toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {student.passed ? 'Passed' : 'Failed'}
                           </td>
                         </tr>
                       ))}

@@ -1,4 +1,3 @@
-// src/pages/auth/Login.jsx
 import React, { useState, useEffect, useContext } from "react";
 import { toast } from "react-toastify";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -47,14 +46,14 @@ const AuthForm = () => {
         });
         console.log("Login result:", loginResult);
         if (loginResult.success) {
-          await getAuthState(); // This should now work
+          await getAuthState();
           console.log("User role:", loginResult.user?.role);
           const redirectPath = loginResult.user?.role === "admin" ? "/admin" : "/";
           console.log("Redirecting to:", redirectPath);
           navigate(redirectPath);
           toast.success("Logged in successfully!");
         } else {
-          toast.error(loginResult.message || "Login failed");
+          toast.error(loginResult.message);
         }
       } else {
         const formDataToSend = new FormData();
@@ -94,21 +93,42 @@ const AuthForm = () => {
   };
 
   return (
-    <section className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-10 rounded-xl shadow-lg w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-6">
-          {localIsLogin ? "Sign In" : "Register"}
+    <section className="min-h-screen flex items-center justify-center px-4 py-12 bg-[#f5f7ff] relative overflow-hidden">
+      <style>
+        {`
+          @keyframes float {
+            0% { transform: translateY(0) translateX(0); }
+            25% { transform: translateY(-30px) translateX(20px); }
+            50% { transform: translateY(0) translateX(40px); }
+            75% { transform: translateY(30px) translateX(20px); }
+            100% { transform: translateY(0) translateX(0); }
+          }
+          .float-1 { animation: float 8s ease-in-out infinite; }
+          .float-2 { animation: float 10s ease-in-out infinite 1s; }
+          .float-3 { animation: float 12s ease-in-out infinite 2s; }
+          .float-4 { animation: float 9s ease-in-out infinite 3s; }
+        `}
+      </style>
+      <div className="absolute inset-0 z-0">
+        <div className="absolute w-24 h-24 bg-blue-200 rounded-full opacity-60 float-1 top-[10%] left-[15%]"></div>
+        <div className="absolute w-32 h-32 bg-pink-200 rounded-full opacity-60 float-2 bottom-[15%] right-[20%]"></div>
+        <div className="absolute w-28 h-28 bg-purple-200 rounded-full opacity-60 float-3 top-[40%] left-[60%]"></div>
+        <div className="absolute w-20 h-20 bg-yellow-200 rounded-full opacity-60 float-4 top-[70%] left-[30%]"></div>
+      </div>
+      <div className={`relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 transition-all duration-300 hover:shadow-[0_0_25px_rgba(74,108,250,0.3)] ${!localIsLogin ? "mt-[60px]" : ""}`}>
+        <h2 className="text-4xl font-extrabold text-center mb-8 text-[#4a6cfa] animate-fade-in">
+          {localIsLogin ? "Hello Again!" : "Let’s Begin!"}
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {!localIsLogin && (
             <div>
               <input
                 type="text"
                 name="name"
-                placeholder="Full Name"
+                placeholder="Your Name"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full p-3 border rounded-lg"
+                className="w-full p-3 bg-[#f8faff] text-gray-800 border-2 border-[#e0e7ff] rounded-lg focus:border-[#4a6cfa] focus:ring-2 focus:ring-[#bfdbfe] transition-all duration-300"
                 required
               />
             </div>
@@ -120,7 +140,7 @@ const AuthForm = () => {
               placeholder="Email Address"
               value={formData.email}
               onChange={handleChange}
-              className="w-full p-3 border rounded-lg"
+              className="w-full p-3 bg-[#f8faff] text-gray-800 border-2 border-[#e0e7ff] rounded-lg focus:border-[#4a6cfa] focus:ring-2 focus:ring-[#bfdbfe] transition-all duration-300"
               required
             />
           </div>
@@ -131,7 +151,7 @@ const AuthForm = () => {
               placeholder="Password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full p-3 border rounded-lg"
+              className="w-full p-3 bg-[#f8faff] text-gray-800 border-2 border-[#e0e7ff] rounded-lg focus:border-[#4a6cfa] focus:ring-2 focus:ring-[#bfdbfe] transition-all duration-300"
               required
             />
           </div>
@@ -140,25 +160,25 @@ const AuthForm = () => {
               <input
                 type="file"
                 onChange={handleFileChange}
-                className="w-full p-3 border rounded-lg"
+                className="w-full p-2 text-gray-700 bg-[#f8faff] border-2 border-[#e0e7ff] rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#dbe9ff] file:text-[#4a6cfa] hover:file:bg-[#bfdbfe] transition-all duration-300"
               />
             </div>
           )}
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600"
             disabled={loading}
+            className={`w-full py-3 text-white font-bold rounded-lg transition-all duration-300 ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#4a6cfa] hover:bg-[#3b58e0] hover:shadow-[0_8px_20px_rgba(74,108,250,0.5)]"}`}
           >
             {loading ? "Processing..." : localIsLogin ? "Sign In" : "Register"}
           </button>
         </form>
-        <p className="mt-4 text-center">
-          {localIsLogin ? "Don't have an account?" : "Already have an account?"}
+        <p className="mt-6 text-center text-gray-600">
+          {localIsLogin ? "Join the party?" : "Back to login?"}
           <button
             onClick={() => navigate(localIsLogin ? "/register" : "/login")}
-            className="text-blue-500 ml-1 hover:underline"
+            className="ml-1 text-[#4a6cfa] font-semibold hover:text-[#3b58e0] hover:underline transition-all duration-300"
           >
-            {localIsLogin ? "Sign Up" : "Sign In"}
+            {localIsLogin ? "Register" : "Sign In"}
           </button>
         </p>
       </div>

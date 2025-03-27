@@ -1,7 +1,7 @@
 import { createContext, useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom"; // Add this
+import { useNavigate } from "react-router-dom";
 
 export const AppContext = createContext();
 
@@ -9,7 +9,8 @@ export const AppContextProvider = (props) => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
   const [isLogin, setIsLogin] = useState(false);
   const [userData, setUserData] = useState(null);
-  const navigate = useNavigate(); // Add this
+  const [isTestActive, setIsTestActive] = useState(false); // Add this
+  const navigate = useNavigate();
 
   const getAuthState = async () => {
     try {
@@ -59,12 +60,13 @@ export const AppContextProvider = (props) => {
         setUserData(data.user);
         return { success: true, user: data.user };
       } else {
-        throw new Error(data.message || "Login failed");
+        return { success: false, message: data.message || "Login failed" };
       }
     } catch (error) {
       console.error("Login error:", error.response?.data || error.message);
-      toast.error(error.response?.data?.message || "Login failed");
-      return { success: false, message: error.response?.data?.message || "Login failed" };
+      const errorMessage = error.response?.data?.message || "An error occurred during login";
+      toast.error(errorMessage);
+      return { success: false, message: errorMessage };
     }
   };
 
@@ -74,7 +76,7 @@ export const AppContextProvider = (props) => {
       await axios.post(`${backendUrl}/api/auth/logout`, {}, { withCredentials: true });
       setIsLogin(false);
       setUserData(null);
-      navigate("/login"); // Use navigate instead of window.location.href
+      navigate("/login");
       toast.success("Logged out successfully!");
     } catch (error) {
       console.error("Logout error:", error.response?.data || error.message);
@@ -88,7 +90,17 @@ export const AppContextProvider = (props) => {
 
   return (
     <AppContext.Provider
-      value={{ backendUrl, isLogin, setIsLogin, userData, login, logout, getAuthState }}
+      value={{ 
+        backendUrl, 
+        isLogin, 
+        setIsLogin, 
+        userData, 
+        login, 
+        logout, 
+        getAuthState, 
+        isTestActive, 
+        setIsTestActive 
+      }}
     >
       {props.children}
     </AppContext.Provider>

@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../../context/AppContext.jsx';
 
 const TakeTest = () => {
-  const { backendUrl } = useContext(AppContext);
+  const { backendUrl, setIsTestActive } = useContext(AppContext);
   const { id } = useParams();
   const navigate = useNavigate();
   const [test, setTest] = useState(null);
@@ -53,7 +53,6 @@ const TakeTest = () => {
     return () => clearInterval(timer);
   }, [isTestStarted, timeRemaining]);
 
-  // Security: Detect tab switch, window close, and block copy-paste
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (isTestStarted && document.hidden) {
@@ -70,33 +69,21 @@ const TakeTest = () => {
       }
     };
 
-    const handleCopyPaste = (e) => {
-      if (isTestStarted) {
-        e.preventDefault();
-        alert('Copying is disabled during the test.');
-      }
-    };
-
-    const handleContextMenu = (e) => {
-      if (isTestStarted) {
-        e.preventDefault();
+    const handleFullscreenChange = () => {
+      if (isTestStarted && !document.fullscreenElement) {
+        alert('Full-screen exited! Test will be auto-submitted.');
+        handleSubmit();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('copy', handleCopyPaste);
-    document.addEventListener('cut', handleCopyPaste);
-    document.addEventListener('paste', handleCopyPaste);
-    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('copy', handleCopyPaste);
-      document.removeEventListener('cut', handleCopyPaste);
-      document.removeEventListener('paste', handleCopyPaste);
-      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
   }, [isTestStarted]);
 
@@ -109,8 +96,20 @@ const TakeTest = () => {
   };
 
   const handleStartTest = () => {
-    setIsTestStarted(true);
-    setTimeStarted(Date.now());
+    const proceed = window.confirm(
+      'The test will start in full-screen mode. Please stay in full-screen and do not press Esc during the test. Click OK to begin.'
+    );
+    if (proceed) {
+      setIsTestStarted(true);
+      setTimeStarted(Date.now());
+      setIsTestActive(true);
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.error('Failed to enter full-screen:', err);
+        alert('Please allow full-screen mode to start the test.');
+        setIsTestActive(false); // Reset if full-screen fails
+        setIsTestStarted(false);
+      });
+    }
   };
 
   const handleAnswerChange = (questionIdx, value) => {
@@ -130,12 +129,20 @@ const TakeTest = () => {
       );
       if (response.data.success) {
         alert('Test submitted successfully!');
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        }
+        setIsTestActive(false);
         navigate('/');
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to submit test');
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+      setIsTestActive(false);
     } finally {
-      setIsTestStarted(false); // Prevent further interaction
+      setIsTestStarted(false);
     }
   };
 
@@ -221,7 +228,7 @@ const TakeTest = () => {
                 {test.questions.map((question, idx) => (
                   <div
                     key={idx}
-                    className="bg-white p-6 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition duration-200 select-none" // Disable text selection
+                    className="bg-white p-6 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition duration-200 select-none"
                   >
                     <p className="text-gray-900 font-semibold text-lg mb-4 select-none">
                       {idx + 1}. {question.text}
@@ -231,7 +238,7 @@ const TakeTest = () => {
                         {question.options.map((option, optIdx) => (
                           <label
                             key={optIdx}
-                            className="flex items-center space-x-3 cursor-pointer p-3 rounded-md hover:bg-indigo-50 transition duration-150 select-none" // Disable text selection
+                            className="flex items-center space-x-3 cursor-pointer p-3 rounded-md hover:bg-indigo-50 transition duration-150 select-none"
                           >
                             <input
                               type="radio"

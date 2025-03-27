@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Route, Routes } from "react-router-dom";
 import { AppContextProvider, AppContext } from "./context/AppContext";
 import Home from "./pages/common/Home";
@@ -19,7 +19,6 @@ import AuthForm from "./pages/auth/Login";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import StudentDetailsForm from "./pages/user/StudentDetailsForm";
-import { useContext } from "react";
 import UpdateRoles from "./pages/admin/UpdateRoles";
 import AllStudents from "./pages/admin/AllStudents";
 import OfficerLayout from "./Layouts/OfficerLayout";
@@ -33,15 +32,15 @@ import StudentLists from "./pages/placement_officer/StudentLists";
 import ViewAllTest from "./pages/placement_officer/ViewAllTest";
 import MockTestAttendees from "./pages/placement_officer/MockTestAttendees";
 import MockTestResults from "./pages/placement_officer/MockTestResults";
+import TestHistory from "./pages/user/TestHistory";
+import Leaderboard from "./pages/user/LeaderBoard";
 
 const App = () => {
   return (
     <AppContextProvider>
       <ToastContainer />
       <div className="flex flex-col min-h-screen">
-        {/* Header - Role Based */}
         <NavbarSelector />
-
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -50,20 +49,17 @@ const App = () => {
             <Route path="/about_us" element={<AboutUs />} />
             <Route path="/login" element={<AuthForm />} />
             <Route path="/register" element={<AuthForm />} />
-
-
             <Route path="/user" element={<UserLayout />}>
               <Route index element={<Home />} />
               <Route path="profile" element={<Profile />} />
               <Route path="upload-details" element={<StudentDetailsForm />} />
               <Route path="mock-tests">
-                  <Route path="take-test" element={<TakeTestList />} />
-                  <Route path="take-test/:id" element={<TakeTest />} />
-                  {/* <Route path="marks" element={<Results />} /> Uncommented */}
-                </Route>
+                <Route path="take-test" element={<TakeTestList />} />
+                <Route path="take-test/:id" element={<TakeTest />} />
+                <Route path="test-history" element={<TestHistory />} />
+                <Route path="ranks" element={<Leaderboard />} />
+              </Route>
             </Route>
-
-
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="manage-users/update-roles" element={<UpdateRoles />} />
@@ -82,7 +78,6 @@ const App = () => {
             </Route>
           </Routes>
         </main>
-
         <FooterSelector />
       </div>
     </AppContextProvider>
@@ -90,8 +85,10 @@ const App = () => {
 };
 
 const NavbarSelector = () => {
-  const { userData } = useContext(AppContext);
-  console.log("NavbarSelector - userData:", userData);
+  const { userData, isTestActive } = useContext(AppContext);
+  console.log("NavbarSelector - userData:", userData, "isTestActive:", isTestActive);
+
+  if (isTestActive) return null; 
 
   if (!userData) {
     return <Navbar />;
@@ -105,29 +102,31 @@ const NavbarSelector = () => {
     case "training_team":
       return <TeamNavbar />;
     case "admin":
-      return null; 
+      return null;
     default:
       return <Navbar />;
   }
 };
 
 const FooterSelector = () => {
-  const { userData } = useContext(AppContext);
-  console.log("FooterSelector - userData:", userData);
+  const { userData, isTestActive } = useContext(AppContext);
+  console.log("FooterSelector - userData:", userData, "isTestActive:", isTestActive);
+
+  if (isTestActive) return null; 
 
   if (!userData) {
-    return <Footers />; 
+    return <Footers />;
   }
 
   switch (userData.role) {
     case "student":
     case "placement_officer":
     case "training_team":
-      return <Footers />; 
+      return <Footers />;
     case "admin":
-      return null; 
+      return null;
     default:
-      return <Footers />; 
+      return <Footers />;
   }
 };
 

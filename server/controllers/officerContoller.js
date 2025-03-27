@@ -308,23 +308,36 @@ export const checkResults = async (req, res) => {
     }
 
     const testResults = await mockTestResultModel
-      .find({}, "studentId completedAt mockTestId mark") // Use "mark" here
+      .find(
+        {},
+        "studentId completedAt mockTestId mark totalQuestions percentage passed" 
+      )
       .populate("studentId", "name email")
-      .populate("mockTestId", "testName")
+      .populate("mockTestId", "testName questions passMark")
       .lean();
 
     const allStudents = await userModel.find({ role: "student" }, "_id").lean();
 
     const responseData = {
-      tests: testResults.map((result) => ({
-        studentId: result.studentId._id.toString(),
-        studentName: result.studentId.name,
-        studentEmail: result.studentId.email,
-        mockTestId: result.mockTestId._id.toString(),
-        testName: result.mockTestId.testName,
-        marks: result.mark, // Map "mark" to "marks"
-        completedAt: result.completedAt,
-      })),
+      tests: testResults.map((result) => {
+        const totalQuestions = result.mockTestId.questions.length;
+        const fullMarks = totalQuestions; 
+        const passMark = result.mockTestId.passMark;
+        return {
+          studentId: result.studentId._id.toString(),
+          studentName: result.studentId.name,
+          studentEmail: result.studentId.email,
+          mockTestId: result.mockTestId._id.toString(),
+          testName: result.mockTestId.testName,
+          marks: result.mark,
+          completedAt: result.completedAt,
+          totalQuestions,
+          fullMarks,
+          passMark,
+          percentage: result.percentage,
+          passed: result.passed, 
+        };
+      }),
       totalStudents: allStudents.length,
     };
 

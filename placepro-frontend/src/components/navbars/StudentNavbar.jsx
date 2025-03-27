@@ -39,9 +39,9 @@ const StudentNavbar = () => {
           path: "/mock-tests",
           label: "MOCK TESTS",
           dropdown: [
-            { path: "/mock-tests/marks", label: "Past Results" },
-            { path: "/mock-tests/ranks", label: "Leaderboard Rankings" },
-            { path: "/user/mock-tests/take-test", label: "Take Test" }, // Fix path here
+            { path: "/user/mock-tests/take-test", label: "Take Test" }, 
+            { path: "/user/mock-tests/test-history", label: "Past Results" },
+            { path: "/user/mock-tests/ranks", label: "Leaderboard Rankings" },
           ],
         },
         {
