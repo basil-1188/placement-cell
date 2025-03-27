@@ -82,7 +82,7 @@ export const register = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role, 
+        role: user.role,
         profileImage: user.profileImage,
       },
     });
@@ -125,7 +125,7 @@ export const login = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role, 
+        role: user.role,
         profileImage: user.profileImage,
       },
     });
@@ -136,12 +136,12 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    console.log("Clearing token cookie:", req.cookies.token); 
+    console.log("Clearing token cookie:", req.cookies.token);
     res.clearCookie("token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", 
+      secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-      path: "/", 
+      path: "/",
     });
     console.log("Token cookie cleared");
     return res.json({ success: true, message: "Logged out successfully" });
@@ -155,10 +155,23 @@ export const isAuthenticated = async (req, res) => {
   try {
     console.log("isAuthenticated - req.user:", req.user);
     console.log("isAuthenticated - req.cookies.token:", req.cookies.token);
-    if (req.user) {
-      return res.json({ success: true });
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "Not authenticated" });
     }
-    return res.status(401).json({ success: false, message: "Not authenticated" });
+    const user = await userModel.findById(req.user._id).select("-password");
+    if (!user) {
+      return res.status(401).json({ success: false, message: "User not found" });
+    }
+    return res.json({
+      success: true,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profileImage: user.profileImage,
+      },
+    });
   } catch (error) {
     console.error("isAuthenticated error:", error.message);
     return res.status(500).json({ success: false, message: error.message });
@@ -201,25 +214,19 @@ Nirmala College MCA Placement Team`,
       html: `
         <div style="font-family: Arial, sans-serif; background-color: #f9fafb; padding: 20px;">
           <div style="max-width: 500px; background-color: #ffffff; padding: 20px; margin: auto; border-radius: 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);">
-            
             <h2 style="color: #1e3a8a; text-align: center; font-size: 22px;">OTP Verification</h2>
-
             <p style="color: #374151; text-align: center; font-size: 16px;">
               Your One-Time Password (OTP) for resetting your password is:
             </p>
-
             <div style="background-color: #fef3c7; text-align: center; padding: 10px; font-size: 20px; font-weight: bold; color: #d97706; border-radius: 5px; margin: 15px 0;">
               ${otp}
             </div>
-
             <p style="color: #6b7280; text-align: center; font-size: 15px;">
               This OTP is valid for <strong>10 minutes</strong>. Please use it to reset your password.
             </p>
-
             <p style="color: #6b7280; text-align: center; font-size: 15px;">
               If you did not request this, please ignore this email.
             </p>
-
             <p style="color: #6b7280; text-align: center; font-size: 14px; margin-top: 20px;">
               Best regards, <br/>
               <strong>Nirmala College MCA Placement Team</strong>

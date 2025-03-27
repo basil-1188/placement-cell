@@ -4,8 +4,9 @@ import { AppContext } from "../../context/AppContext";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
-import { Dialog } from '@headlessui/react'
+import { Dialog } from "@headlessui/react";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import AdminSidebar from "../../components/admin/AdminSidebar";
 
 const AllStudents = () => {
   const { backendUrl, userData } = useContext(AppContext);
@@ -14,6 +15,7 @@ const AllStudents = () => {
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isMinimized, setIsMinimized] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -66,87 +68,91 @@ const AllStudents = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
+      <AdminSidebar isMinimized={isMinimized} setIsMinimized={setIsMinimized} />
       <motion.div
-        className="w-full max-w-7xl mx-auto flex flex-col"
+        className={`flex-1 p-6 transition-all duration-300 ${
+          isMinimized ? "md:ml-16" : "md:ml-64"
+        }`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="bg-gradient-to-r mt-12 from-blue-700 to-blue-900 text-white p-6 shadow-lg">
-          <h1 className="text-3xl font-bold">Student Management Dashboard</h1>
-          <p className="mt-1 text-blue-200">Manage and view student details</p>
-        </div>
-
-        <div className="flex-1 p-6">
-          {/* Search Bar */}
-          <div className="mb-6 flex items-center gap-4">
-            <div className="relative w-full max-w-md">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by name or admission number..."
-                className="w-full pl-10 pr-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-gradient-to-r mt-12 from-blue-700 to-blue-900 text-white p-6 shadow-lg">
+            <h1 className="text-3xl font-bold text-center">Student Management Dashboard</h1>
+            <p className="mt-1 text-blue-200 text-center">Manage and view student details</p>
           </div>
 
-          {/* Students Table */}
-          {filteredStudents.length === 0 ? (
-            <p className="text-center text-gray-500">No students found.</p>
-          ) : (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="bg-gray-200 text-gray-700">
-                  <tr>
-                    <th className="p-4 font-semibold">Profile</th>
-                    <th className="p-4 font-semibold">Name</th>
-                    <th className="p-4 font-semibold">Admission No</th>
-                    <th className="p-4 font-semibold">Email</th>
-                    <th className="p-4 font-semibold">Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStudents.map((student) => (
-                    <motion.tr
-                      key={student._id}
-                      className="border-b hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setSelectedStudent(student)}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <td className="p-4">
-                        <img
-                          src={student.profileImage || "https://via.placeholder.com/40"}
-                          alt={student.name || "Profile"}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      </td>
-                      <td className="p-4">{student.name || "N/A"}</td>
-                      <td className="p-4">{student.admnNo || "N/A"}</td>
-                      <td className="p-4">{student.email || "N/A"}</td>
-                      <td className="p-4">
-                        <button className="text-blue-600 hover:underline">View Details</button>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="mt-6">
+            <div className="mb-6 flex justify-center">
+              <div className="relative w-full max-w-md">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by name or admission number..."
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
-          )}
 
-          {/* Back Button */}
-          <div className="mt-6 text-center">
-            <motion.button
-              onClick={() => navigate("/admin")}
-              className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Back to Dashboard
-            </motion.button>
+            {/* Students Table */}
+            {filteredStudents.length === 0 ? (
+              <p className="text-center text-gray-500">No students found.</p>
+            ) : (
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-200 text-gray-700">
+                    <tr>
+                      <th className="p-4 font-semibold">Profile</th>
+                      <th className="p-4 font-semibold">Name</th>
+                      <th className="p-4 font-semibold">Admission No</th>
+                      <th className="p-4 font-semibold">Email</th>
+                      <th className="p-4 font-semibold">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredStudents.map((student) => (
+                      <motion.tr
+                        key={student._id}
+                        className="border-b hover:bg-gray-50 cursor-pointer"
+                        onClick={() => setSelectedStudent(student)}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <td className="p-4">
+                          <img
+                            src={student.profileImage || "https://via.placeholder.com/40"}
+                            alt={student.name || "Profile"}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        </td>
+                        <td className="p-4">{student.name || "N/A"}</td>
+                        <td className="p-4">{student.admnNo || "N/A"}</td>
+                        <td className="p-4">{student.email || "N/A"}</td>
+                        <td className="p-4">
+                          <button className="text-blue-600 hover:underline">View Details</button>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Back Button */}
+            <div className="mt-6 text-center">
+              <motion.button
+                onClick={() => navigate("/admin")}
+                className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Back to Dashboard
+              </motion.button>
+            </div>
           </div>
         </div>
 

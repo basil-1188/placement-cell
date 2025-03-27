@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, Navigate } from "react-router-dom";
 import { AppContextProvider, AppContext } from "./context/AppContext";
 import Home from "./pages/common/Home";
 import Blogs from "./pages/common/Blogs";
@@ -35,6 +35,24 @@ import MockTestResults from "./pages/placement_officer/MockTestResults";
 import TestHistory from "./pages/user/TestHistory";
 import Leaderboard from "./pages/user/LeaderBoard";
 
+const ProtectedRoute = ({ children, allowedRoles, isPublic = false }) => {
+  const { isLogin, userData, loading } = useContext(AppContext);
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#f5f7ff]">Loading...</div>;
+  }
+
+  if (!isLogin && !isPublic) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(userData?.role)) {
+    return <Navigate to={userData?.role === "admin" ? "/admin" : "/"} replace />;
+  }
+
+  return children;
+};
+
 const App = () => {
   return (
     <AppContextProvider>
@@ -43,13 +61,27 @@ const App = () => {
         <NavbarSelector />
         <main className="flex-1">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute isPublic={true}>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/blogs" element={<Blogs />} />
             <Route path="/contact_us" element={<Contact />} />
             <Route path="/about_us" element={<AboutUs />} />
             <Route path="/login" element={<AuthForm />} />
             <Route path="/register" element={<AuthForm />} />
-            <Route path="/user" element={<UserLayout />}>
+            <Route
+              path="/user"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <UserLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<Home />} />
               <Route path="profile" element={<Profile />} />
               <Route path="upload-details" element={<StudentDetailsForm />} />
@@ -60,12 +92,26 @@ const App = () => {
                 <Route path="ranks" element={<Leaderboard />} />
               </Route>
             </Route>
-            <Route path="/admin" element={<AdminLayout />}>
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<Dashboard />} />
               <Route path="manage-users/update-roles" element={<UpdateRoles />} />
               <Route path="manage-users/all-studentdetails" element={<AllStudents />} />
             </Route>
-            <Route path="/officer" element={<OfficerLayout />}>
+            <Route
+              path="/officer"
+              element={
+                <ProtectedRoute allowedRoles={["placement_officer"]}>
+                  <OfficerLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route path="profile" element={<OfficerProfile />} />
               <Route path="create-test" element={<CreateTest />} />
               <Route path="student-details" element={<StudentLists />} />
@@ -73,7 +119,14 @@ const App = () => {
               <Route path="mock-test-attendees" element={<MockTestAttendees />} />
               <Route path="mock-test-results" element={<MockTestResults />} />
             </Route>
-            <Route path="/team" element={<TeamLayout />}>
+            <Route
+              path="/team"
+              element={
+                <ProtectedRoute allowedRoles={["training_team"]}>
+                  <TeamLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route path="profile" element={<TeamProfile />} />
             </Route>
           </Routes>
@@ -88,7 +141,7 @@ const NavbarSelector = () => {
   const { userData, isTestActive } = useContext(AppContext);
   console.log("NavbarSelector - userData:", userData, "isTestActive:", isTestActive);
 
-  if (isTestActive) return null; 
+  if (isTestActive) return null;
 
   if (!userData) {
     return <Navbar />;
@@ -102,7 +155,7 @@ const NavbarSelector = () => {
     case "training_team":
       return <TeamNavbar />;
     case "admin":
-      return null;
+      return null; 
     default:
       return <Navbar />;
   }
@@ -112,7 +165,7 @@ const FooterSelector = () => {
   const { userData, isTestActive } = useContext(AppContext);
   console.log("FooterSelector - userData:", userData, "isTestActive:", isTestActive);
 
-  if (isTestActive) return null; 
+  if (isTestActive) return null;
 
   if (!userData) {
     return <Footers />;
@@ -124,7 +177,7 @@ const FooterSelector = () => {
     case "training_team":
       return <Footers />;
     case "admin":
-      return null;
+      return null; 
     default:
       return <Footers />;
   }

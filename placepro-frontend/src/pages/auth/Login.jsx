@@ -5,7 +5,7 @@ import { AppContext } from "../../context/AppContext";
 import axios from "axios";
 
 const AuthForm = () => {
-  const { backendUrl, setIsLogin, login, getAuthState } = useContext(AppContext);
+  const { backendUrl, setIsLogin, login, getAuthState, loading, userData } = useContext(AppContext);
   const location = useLocation();
   const navigate = useNavigate();
   const [localIsLogin, setLocalIsLogin] = useState(location.pathname === "/login");
@@ -15,11 +15,18 @@ const AuthForm = () => {
     password: "",
     profilePic: null,
   });
-  const [loading, setLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
 
   useEffect(() => {
     setLocalIsLogin(location.pathname === "/login");
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!loading && userData) {
+      const redirectPath = userData.role === "admin" ? "/admin" : "/";
+      navigate(redirectPath, { replace: true });
+    }
+  }, [loading, userData, navigate]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -36,7 +43,7 @@ const AuthForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setFormLoading(true);
 
     try {
       if (localIsLogin) {
@@ -49,7 +56,6 @@ const AuthForm = () => {
           await getAuthState();
           console.log("User role:", loginResult.user?.role);
           const redirectPath = loginResult.user?.role === "admin" ? "/admin" : "/";
-          console.log("Redirecting to:", redirectPath);
           navigate(redirectPath);
           toast.success("Logged in successfully!");
         } else {
@@ -88,9 +94,13 @@ const AuthForm = () => {
       console.error("Submission error:", err.response?.data || err.message);
       toast.error(err.response?.data?.message || "An error occurred");
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#f5f7ff]">Loading...</div>;
+  }
 
   return (
     <section className="min-h-screen flex items-center justify-center px-4 py-12 bg-[#f5f7ff] relative overflow-hidden">
@@ -166,10 +176,10 @@ const AuthForm = () => {
           )}
           <button
             type="submit"
-            disabled={loading}
-            className={`w-full py-3 text-white font-bold rounded-lg transition-all duration-300 ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#4a6cfa] hover:bg-[#3b58e0] hover:shadow-[0_8px_20px_rgba(74,108,250,0.5)]"}`}
+            disabled={formLoading}
+            className={`w-full py-3 text-white font-bold rounded-lg transition-all duration-300 ${formLoading ? "bg-gray-400 cursor-not-allowed" : "bg-[#4a6cfa] hover:bg-[#3b58e0] hover:shadow-[0_8px_20px_rgba(74,108,250,0.5)]"}`}
           >
-            {loading ? "Processing..." : localIsLogin ? "Sign In" : "Register"}
+            {formLoading ? "Processing..." : localIsLogin ? "Sign In" : "Register"}
           </button>
         </form>
         <p className="mt-6 text-center text-gray-600">

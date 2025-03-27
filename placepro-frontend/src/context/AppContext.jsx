@@ -9,7 +9,8 @@ export const AppContextProvider = (props) => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
   const [isLogin, setIsLogin] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [isTestActive, setIsTestActive] = useState(false); // Add this
+  const [isTestActive, setIsTestActive] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const getAuthState = async () => {
@@ -21,8 +22,7 @@ export const AppContextProvider = (props) => {
       console.log("Auth response:", response.data);
       if (response.data.success) {
         setIsLogin(true);
-        const user = await getUserData();
-        if (user) setUserData(user);
+        setUserData(response.data.user);
       } else {
         setIsLogin(false);
         setUserData(null);
@@ -31,20 +31,8 @@ export const AppContextProvider = (props) => {
       console.error("getAuthState error:", error.response?.data || error.message);
       setIsLogin(false);
       setUserData(null);
-    }
-  };
-
-  const getUserData = async () => {
-    try {
-      console.log("Fetching user data from:", `${backendUrl}/api/user/data`);
-      const { data } = await axios.get(`${backendUrl}/api/user/data`, {
-        withCredentials: true,
-      });
-      console.log("User data response:", data);
-      return data.success ? data.userData : null;
-    } catch (error) {
-      console.error("getUserData error:", error.response?.data || error.message);
-      return null;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -90,16 +78,17 @@ export const AppContextProvider = (props) => {
 
   return (
     <AppContext.Provider
-      value={{ 
-        backendUrl, 
-        isLogin, 
-        setIsLogin, 
-        userData, 
-        login, 
-        logout, 
-        getAuthState, 
-        isTestActive, 
-        setIsTestActive 
+      value={{
+        backendUrl,
+        isLogin,
+        setIsLogin,
+        userData,
+        login,
+        logout,
+        getAuthState,
+        isTestActive,
+        setIsTestActive,
+        loading,
       }}
     >
       {props.children}
