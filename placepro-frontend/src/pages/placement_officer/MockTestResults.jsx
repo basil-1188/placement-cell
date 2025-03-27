@@ -110,7 +110,7 @@ const MockTestResults = () => {
   }
 
   return (
-    <div className="min-h-screen mt-15 bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-6">
+    <div className="min-h-screen mt-20 bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-6">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl text-center font-extrabold text-gray-900 mb-10 tracking-tight">
           Mock Test Results

@@ -144,6 +144,7 @@ export const getStudentDetails = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 export const getAvailableMockTests = async (req, res) => {
   try {
     const studentId = req.user?._id;
@@ -154,8 +155,7 @@ export const getAvailableMockTests = async (req, res) => {
     const now = new Date();
     const tests = await mockTestModel.find({
       isPublished: true,
-      startDate: { $lte: now },
-      lastDayToAttend: { $gte: now },
+      lastDayToAttend: { $gte: now }, // Show all non-expired tests
     }).select('testName startDate lastDayToAttend maxAttempts description');
 
     const availableTests = [];
@@ -165,6 +165,7 @@ export const getAvailableMockTests = async (req, res) => {
         mockTestId: test._id,
       });
       if (previousAttempts < test.maxAttempts) {
+        const isAvailableNow = now >= new Date(test.startDate);
         availableTests.push({
           _id: test._id,
           testName: test.testName,
@@ -172,6 +173,7 @@ export const getAvailableMockTests = async (req, res) => {
           lastDayToAttend: test.lastDayToAttend,
           attemptsRemaining: test.maxAttempts - previousAttempts,
           description: test.description,
+          isAvailableNow, // New flag
         });
       }
     }
@@ -190,6 +192,7 @@ export const getAvailableMockTests = async (req, res) => {
     });
   }
 };
+
 export const attendMockTest = async (req, res) => {
   try {
     const { id } = req.params;
@@ -212,23 +215,30 @@ export const attendMockTest = async (req, res) => {
     const startDate = new Date(test.startDate);
     const lastDayToAttend = new Date(test.lastDayToAttend);
 
-    if (now < startDate) {
+    if (now < startDate || now > lastDayToAttend) {
       return res.status(403).json({
         success: false,
-        message: `This test is not available yet. It starts on ${startDate.toLocaleDateString()}`,
+        message: 'This test is not available at this time',
       });
     }
 
-    if (now > lastDayToAttend) {
+    const previousResults = await mockTestResultModel.findOne({
+      studentId,
+      mockTestId: id,
+      status: 'started',
+    });
+
+    if (previousResults) {
       return res.status(403).json({
         success: false,
-        message: `This test is no longer available. It ended on ${lastDayToAttend.toLocaleDateString()}`,
+        message: 'You have an ongoing test attempt. Please complete it or it will be auto-submitted.',
       });
     }
 
     const previousAttempts = await mockTestResultModel.countDocuments({
       studentId,
       mockTestId: id,
+      status: 'completed',
     });
 
     if (previousAttempts >= test.maxAttempts) {
@@ -237,6 +247,24 @@ export const attendMockTest = async (req, res) => {
         message: `You have exceeded the maximum attempts (${test.maxAttempts}) for this test`,
       });
     }
+
+    // Create an initial result entry when the test is started
+    const initialResult = new mockTestResultModel({
+      studentId,
+      mockTestId: id,
+      mark: 0,
+      timeTaken: 0,
+      questionsAnswered: [],
+      notAnswered: test.questions.length,
+      wrongAnswers: 0,
+      totalQuestions: test.questions.length,
+      status: 'started',
+      attemptNumber: previousAttempts + 1,
+      percentage: 0,
+      passed: false,
+      startedAt: new Date(),
+    });
+    await initialResult.save();
 
     const testDetails = {
       testName: test.testName,
@@ -250,7 +278,6 @@ export const attendMockTest = async (req, res) => {
       timeLimit: test.timeLimit,
       startDate: test.startDate,
       lastDayToAttend: test.lastDayToAttend,
-      description: test.description,
       maxAttempts: test.maxAttempts,
       passMark: test.passMark,
       totalQuestions: test.questions.length,
@@ -275,14 +302,10 @@ export const submitMockTest = async (req, res) => {
   try {
     const { id } = req.params;
     const studentId = req.user?._id;
-    const { answers, timeTaken, startedAt } = req.body;
+    const { answers = {}, timeTaken, startedAt } = req.body;
 
     if (!studentId) {
       return res.status(401).json({ success: false, message: 'Unauthorized: No user ID found' });
-    }
-
-    if (!answers || typeof answers !== 'object' || !timeTaken || !startedAt) {
-      return res.status(400).json({ success: false, message: 'Answers, timeTaken, and startedAt are required' });
     }
 
     const test = await mockTestModel.findById(id);
@@ -290,15 +313,16 @@ export const submitMockTest = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Test not found' });
     }
 
-    const previousAttempts = await mockTestResultModel.countDocuments({
+    const existingResult = await mockTestResultModel.findOne({
       studentId,
       mockTestId: id,
+      status: 'started',
     });
 
-    if (previousAttempts >= test.maxAttempts) {
+    if (!existingResult) {
       return res.status(403).json({
         success: false,
-        message: `You have exceeded the maximum attempts (${test.maxAttempts}) for this test`,
+        message: 'No active test session found. Start the test first.',
       });
     }
 
@@ -313,7 +337,7 @@ export const submitMockTest = async (req, res) => {
       const answerObj = { questionIndex: idx, isCorrect: false };
 
       if (question.type === 'mcq') {
-        answerObj.selectedAnswer = studentAnswer || null; // Null for unanswered MCQs
+        answerObj.selectedAnswer = studentAnswer || null;
         if (studentAnswer) {
           answerObj.isCorrect = studentAnswer === question.correctAnswer;
           if (answerObj.isCorrect) mark += 1;
@@ -322,7 +346,7 @@ export const submitMockTest = async (req, res) => {
           notAnswered += 1;
         }
       } else if (question.type === 'coding') {
-        answerObj.codingAnswer = studentAnswer || null; // Null for unanswered coding
+        answerObj.codingAnswer = studentAnswer || null;
         if (studentAnswer) {
           const testCaseResults = question.codingDetails.testCases.map((tc) => ({
             input: tc.input,
@@ -334,7 +358,7 @@ export const submitMockTest = async (req, res) => {
           if (answerObj.isCorrect) mark += 1;
           else wrongAnswers += 1;
         } else {
-          answerObj.testCaseResults = []; // Empty array for unanswered coding
+          answerObj.testCaseResults = [];
           notAnswered += 1;
         }
       }
@@ -345,26 +369,20 @@ export const submitMockTest = async (req, res) => {
     const percentage = (mark / totalQuestions) * 100;
     const passed = mark >= test.passMark;
 
-    const result = new mockTestResultModel({
-      studentId,
-      mockTestId: id,
-      mark,
-      timeTaken,
-      questionsAnswered,
-      notAnswered,
-      wrongAnswers,
-      totalQuestions,
-      completedAt: new Date(),
-      status: 'completed',
-      attemptNumber: previousAttempts + 1,
-      percentage,
-      passed,
-      startedAt: new Date(startedAt),
-      feedback: passed ? 'Good job!' : 'Review your answers and try again.',
-    });
+    // Update the existing result
+    existingResult.mark = mark;
+    existingResult.timeTaken = timeTaken;
+    existingResult.questionsAnswered = questionsAnswered;
+    existingResult.notAnswered = notAnswered;
+    existingResult.wrongAnswers = wrongAnswers;
+    existingResult.totalQuestions = totalQuestions;
+    existingResult.completedAt = new Date();
+    existingResult.status = 'completed';
+    existingResult.percentage = percentage;
+    existingResult.passed = passed;
+    existingResult.startedAt = new Date(startedAt);
 
-    // Populate mockTestId before saving to ensure validation works
-    await result.save();
+    await existingResult.save();
 
     res.status(200).json({
       success: true,
@@ -374,7 +392,7 @@ export const submitMockTest = async (req, res) => {
         totalQuestions,
         percentage,
         passed,
-        attemptNumber: previousAttempts + 1,
+        attemptNumber: existingResult.attemptNumber,
       },
     });
   } catch (error) {

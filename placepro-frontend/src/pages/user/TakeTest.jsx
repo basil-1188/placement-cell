@@ -53,6 +53,53 @@ const TakeTest = () => {
     return () => clearInterval(timer);
   }, [isTestStarted, timeRemaining]);
 
+  // Security: Detect tab switch, window close, and block copy-paste
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (isTestStarted && document.hidden) {
+        alert('Tab switch detected! Test will be auto-submitted.');
+        handleSubmit();
+      }
+    };
+
+    const handleBeforeUnload = (e) => {
+      if (isTestStarted) {
+        e.preventDefault();
+        e.returnValue = 'Leaving this page will submit your test. Are you sure?';
+        handleSubmit();
+      }
+    };
+
+    const handleCopyPaste = (e) => {
+      if (isTestStarted) {
+        e.preventDefault();
+        alert('Copying is disabled during the test.');
+      }
+    };
+
+    const handleContextMenu = (e) => {
+      if (isTestStarted) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('copy', handleCopyPaste);
+    document.addEventListener('cut', handleCopyPaste);
+    document.addEventListener('paste', handleCopyPaste);
+    document.addEventListener('contextmenu', handleContextMenu);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('copy', handleCopyPaste);
+      document.removeEventListener('cut', handleCopyPaste);
+      document.removeEventListener('paste', handleCopyPaste);
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, [isTestStarted]);
+
   const canTakeTest = () => {
     if (!test) return false;
     const now = new Date();
@@ -82,11 +129,13 @@ const TakeTest = () => {
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
       if (response.data.success) {
-        alert('Test submitted successfully!')
-        navigate('/'); 
+        alert('Test submitted successfully!');
+        navigate('/');
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to submit test');
+    } finally {
+      setIsTestStarted(false); // Prevent further interaction
     }
   };
 
@@ -141,7 +190,7 @@ const TakeTest = () => {
                 </p>
                 <p className="text-gray-700">
                   <span className="font-semibold text-indigo-600">Attempts Remaining:</span>{' '}
-                  {test.maxAttempts - (test.attemptsTaken || 0)}
+                  {test.maxAttempts}
                 </p>
               </div>
               {canTakeTest() ? (
@@ -172,9 +221,9 @@ const TakeTest = () => {
                 {test.questions.map((question, idx) => (
                   <div
                     key={idx}
-                    className="bg-white p-6 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition duration-200"
+                    className="bg-white p-6 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition duration-200 select-none" // Disable text selection
                   >
-                    <p className="text-gray-900 font-semibold text-lg mb-4">
+                    <p className="text-gray-900 font-semibold text-lg mb-4 select-none">
                       {idx + 1}. {question.text}
                     </p>
                     {question.type === 'mcq' ? (
@@ -182,7 +231,7 @@ const TakeTest = () => {
                         {question.options.map((option, optIdx) => (
                           <label
                             key={optIdx}
-                            className="flex items-center space-x-3 cursor-pointer p-3 rounded-md hover:bg-indigo-50 transition duration-150"
+                            className="flex items-center space-x-3 cursor-pointer p-3 rounded-md hover:bg-indigo-50 transition duration-150 select-none" // Disable text selection
                           >
                             <input
                               type="radio"
@@ -192,7 +241,7 @@ const TakeTest = () => {
                               onChange={(e) => handleAnswerChange(idx, e.target.value)}
                               className="h-5 w-5 text-indigo-600 border-gray-300 focus:ring-indigo-500"
                             />
-                            <span className="text-gray-800 text-base">{option}</span>
+                            <span className="text-gray-800 text-base select-none">{option}</span>
                           </label>
                         ))}
                       </div>

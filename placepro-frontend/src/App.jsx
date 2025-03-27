@@ -42,7 +42,6 @@ const App = () => {
         {/* Header - Role Based */}
         <NavbarSelector />
 
-        {/* Main Content */}
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<Home />} />

@@ -33,9 +33,13 @@ const TakeTestList = () => {
     fetchAvailableTests();
   }, [backendUrl]);
 
-  const handleTestClick = (testId) => {
-    console.log('Navigating to:', `/user/mock-tests/take-test/${testId}`);
-    navigate(`/user/mock-tests/take-test/${testId}`);
+  const handleTestClick = (testId, isAvailableNow) => {
+    if (isAvailableNow) {
+      console.log('Navigating to:', `/user/mock-tests/take-test/${testId}`);
+      navigate(`/user/mock-tests/take-test/${testId}`);
+    } else {
+      alert('This test is not available yet. Check the start date.');
+    }
   };
 
   if (loading) {
@@ -76,8 +80,10 @@ const TakeTestList = () => {
             {tests.map((test) => (
               <div
                 key={test._id}
-                onClick={() => handleTestClick(test._id)}
-                className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl hover:-translate-y-1 transition duration-300 ease-in-out cursor-pointer border border-gray-200"
+                onClick={() => handleTestClick(test._id, test.isAvailableNow)}
+                className={`bg-white rounded-xl shadow-md p-6 hover:shadow-xl hover:-translate-y-1 transition duration-300 ease-in-out cursor-pointer border ${
+                  test.isAvailableNow ? 'border-gray-200' : 'border-yellow-200 opacity-75'
+                }`}
               >
                 <h2 className="text-xl font-semibold text-indigo-900 mb-3 truncate">
                   {test.testName}
@@ -98,9 +104,14 @@ const TakeTestList = () => {
                   </p>
                 </div>
                 <button
-                  className="mt-6 w-full py-2 bg-indigo-600 text-white text-sm font-semibold rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition duration-200"
+                  className={`mt-6 w-full py-2 text-white text-sm font-semibold rounded-md focus:outline-none focus:ring-2 transition duration-200 ${
+                    test.isAvailableNow
+                      ? 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-300'
+                      : 'bg-gray-400 cursor-not-allowed'
+                  }`}
+                  disabled={!test.isAvailableNow}
                 >
-                  Take Test
+                  {test.isAvailableNow ? 'Take Test' : 'Upcoming'}
                 </button>
               </div>
             ))}
