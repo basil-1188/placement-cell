@@ -151,4 +151,88 @@ const mockTestResult = new mongoose.Schema({
 const mockTestResultModel = mongoose.models.MockTestResults || mongoose.model('MockTestResults', mockTestResult);
 
 
-export { userModel, studentModel, mockTestModel, mockTestResultModel };
+const eligibilitySchema = new mongoose.Schema({
+  cgpa: {
+    type: Number,
+    required: [true, "CGPA is required"], 
+    min: [0, "CGPA cannot be less than 0"],
+    max: [10, "CGPA cannot be more than 10"],
+  },
+  skills: {
+    type: [String], 
+    required: [true, "Skills are required"], 
+    validate: {
+      validator: (array) => array.length > 0,
+      message: "At least one skill is required",
+    },
+  },
+  degreeCgpa: {
+    type: Number, 
+    required: false,
+    min: [0, "Degree CGPA cannot be less than 0"],
+    max: [10, "Degree CGPA cannot be more than 10"],
+  },
+  plustwoPercent: {
+    type: Number, 
+    required: false,
+    min: [0, "12th percentage cannot be less than 0"],
+    max: [100, "12th percentage cannot be more than 100"],
+  },
+});
+
+const jobSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: [true, "Job title is required"],
+      trim: true,
+    },
+    company: {
+      type: String,
+      required: [true, "Company name is required"],
+      trim: true,
+    },
+    description: {
+      type: String,
+      required: [true, "Job description is required"],
+      trim: true,
+    },
+    eligibility: {
+      type: eligibilitySchema,
+      required: [true, "Eligibility criteria are required"],
+    },
+    postedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      required: [true, "PostedBy reference is required"],
+    },
+    applicationDeadline: {
+      type: Date,
+      required: [true, "Application deadline is required"],
+      validate: {
+        validator: (date) => date > new Date(),
+        message: "Application deadline must be a future date",
+      },
+    },
+    status: {
+      type: String,
+      enum: ["open", "closed"],
+      required: [true, "Job status is required"],
+      default: "open",
+    },
+    applyLink: {
+      type: String,
+      trim: true,
+      match: [
+        /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
+        "Please provide a valid URL",
+      ],
+    },
+  },
+  { timestamps: true }
+);
+
+const jobModel = mongoose.models.Job || mongoose.model("Job", jobSchema);
+
+
+export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel };

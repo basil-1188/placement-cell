@@ -44,6 +44,7 @@ const StudentNavbar = () => {
             { path: "/user/mock-tests/ranks", label: "Leaderboard Rankings" },
           ],
         },
+        { path: "/user/jobs", label: "JOBS" },
         {
           path: "/study-materials",
           label: "STUDY MATERIALS",

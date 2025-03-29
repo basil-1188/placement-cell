@@ -1,4 +1,5 @@
-import { userModel,mockTestModel,studentModel, mockTestResultModel } from "../models/userModel.js";
+import { userModel,mockTestModel,studentModel, mockTestResultModel,jobModel } from "../models/userModel.js";
+import transporter from "../config/nodemailer.js";
 
 export const getOfficerProfile = async (req, res) => {
   try {
@@ -238,6 +239,7 @@ export const publishTest = async (req, res) => {
     res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };
+
 export const checkAttendees = async (req, res) => {
   try {
     console.log("Fetching attendees for officer:", req.user);
@@ -345,5 +347,104 @@ export const checkResults = async (req, res) => {
   } catch (error) {
     console.error("checkResults error:", error.stack);
     res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const postJobOpening = async (req, res) => {
+  try {
+    console.log("Request user:", req.user);
+    const officer = await userModel.findById(req.user?._id);
+    if (!officer) {
+      return res.status(401).json({ success: false, message: "Unauthorized: No user data" });
+    }
+
+    if (officer.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied: Only placement officers can post jobs" });
+    }
+
+    const { title, company, description, eligibility, applicationDeadline, applyLink } = req.body;
+    console.log("Request body:", req.body);
+
+    if (!title || !company || !description || !eligibility || !applicationDeadline) {
+      return res.status(400).json({ success: false, message: "All required fields must be provided" });
+    }
+
+    if (!eligibility.cgpa || !Array.isArray(eligibility.skills) || eligibility.skills.length === 0) {
+      return res.status(400).json({ success: false, message: "Eligibility must include cgpa and at least one skill" });
+    }
+
+    const deadline = new Date(applicationDeadline);
+    if (isNaN(deadline.getTime()) || deadline <= new Date()) {
+      return res.status(400).json({ success: false, message: "Application deadline must be a valid future date" });
+    }
+
+    const newJob = new jobModel({
+      title,
+      company,
+      description,
+      eligibility: {
+        cgpa: eligibility.cgpa,
+        skills: eligibility.skills,
+        degreeCgpa: eligibility.degreeCgpa || undefined,
+        plustwoPercent: eligibility.plustwoPercent || undefined,
+      },
+      postedBy: officer._id,
+      applicationDeadline: deadline,
+      status: "open",
+      applyLink: applyLink || undefined,
+    });
+
+    const savedJob = await newJob.save();
+    console.log("Saved job:", savedJob);
+
+    const students = await userModel.find({ role: "student" });
+    console.log("Found students:", students.length);
+
+    const emailPromises = students.map((student) => {
+      const mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: student.email, 
+        subject: "New Job Posting | Nirmala College MCA Placement Portal",
+        html: `
+          <div style="font-family: system-ui, sans-serif, Arial; font-size: 16px; background-color: #fff8f1">
+            <div style="max-width: 600px; margin: auto; padding: 16px">
+              <h2 style="font-size: 20px; margin: 16px 0">New Job Posting</h2>
+              <p style="margin: 0 0 16px">Dear ${student.name || "Student"},</p>
+              <p style="margin: 0 0 16px">
+                A new job opportunity has been posted on <strong>Place-Pro</strong>!
+              </p>
+              <p style="margin: 0 0 16px">
+                <strong>Role:</strong> ${title}<br />
+                <strong>Company:</strong> ${company}<br />
+                <strong>Last Date to Apply:</strong> ${deadline.toDateString()}
+              </p>
+              <p style="margin: 0 0 16px">
+                Kindly log in to the <strong>Place-Pro</strong> portal to check your eligibility and apply for this position.
+              </p>
+              <p style="margin: 0">
+                Best regards,<br />
+                <strong>Nirmala College MCA Placement Team</strong>
+              </p>
+            </div>
+          </div>
+        `,
+      };
+
+      return transporter.sendMail(mailOptions).catch((error) => {
+        console.error(`Failed to send email to ${student.email}:`, error.message);
+      });
+    });
+
+    await Promise.all(emailPromises);
+    console.log("Emails sent to students");
+
+    return res.status(201).json({
+      success: true,
+      message: "Job opening posted successfully",
+      data: savedJob,
+    });
+  } catch (error) {
+    console.error("Error in postJobOpening:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };

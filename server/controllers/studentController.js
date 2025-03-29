@@ -1,4 +1,4 @@
-import { userModel, studentModel,mockTestModel,mockTestResultModel } from "../models/userModel.js";
+import { userModel, studentModel,mockTestModel,mockTestResultModel,jobModel } from "../models/userModel.js";
 import { uploadToCloudinary } from "../utils/Cloudinary.js";
 
 export const addStudentDetails = async (req, res) => {
@@ -577,5 +577,57 @@ export const getRanks = async (req, res) => {
   } catch (error) {
     console.error("getRanks error:", error.stack);
     res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const jobOpening = async (req, res) => {
+  const studentId = req.user?._id;
+  if (!studentId) {
+    return res.status(401).json({ success: false, message: "Unauthorized: No user ID found" });
+  }
+
+  try {
+    const jobs = await jobModel.find({ status: "open" }).select(
+      "title company description eligibility applicationDeadline applyLink"
+    );
+    console.log("Fetched jobs:", jobs); 
+
+    if (!jobs || jobs.length === 0) {
+      return res.status(200).json({ success: true, message: "No open job postings found", data: [] });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Job openings fetched successfully",
+      data: jobs,
+    });
+  } catch (error) {
+    console.error("getjobopening error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+export const getStudentMarks = async (req, res) => {
+  const studentId = req.user?._id;
+  if (!studentId) {
+    return res.status(401).json({ success: false, message: "Unauthorized: No user ID found" });
+  }
+
+  try {
+    const student = await studentModel.findOne({ studentId: studentId });
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student details not found" });
+    }
+
+    const marks = {
+      pg: student.pgMarks.map((sem) => sem.cgpa).filter((cgpa) => cgpa !== undefined), 
+      degreeCgpa: parseFloat(student.degreeCgpa) || null,
+      plustwoPercent: parseFloat(student.plustwoPercent) || null,
+    };
+
+    console.log("Fetched student marks:", marks); // Debug
+    return res.status(200).json({ success: true, marks });
+  } catch (error) {
+    console.error("getStudentMarks error:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };
