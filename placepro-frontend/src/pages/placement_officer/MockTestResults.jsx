@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
-import { AppContext } from '../../context/AppContext.jsx';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from "react";
+import axios from "axios";
+import { AppContext } from "../../context/AppContext.jsx";
+import { useLocation } from "react-router-dom";
 
 const MockTestResults = () => {
   const { backendUrl } = useContext(AppContext);
@@ -14,7 +14,7 @@ const MockTestResults = () => {
   const [selectedTest, setSelectedTest] = useState(null);
   const location = useLocation();
 
-  console.log('MockTestResults - Current location:', location.pathname);
+  console.log("MockTestResults - Current location:", location.pathname);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -22,7 +22,7 @@ const MockTestResults = () => {
         const response = await axios.get(`${backendUrl}/api/officer/check-results`, {
           withCredentials: true,
         });
-        console.log('API Response:', response.data);
+        console.log("API Response:", response.data);
         if (response.data.success) {
           const tests = Array.isArray(response.data.data.tests) ? response.data.data.tests : [];
           setResultsData({
@@ -30,11 +30,11 @@ const MockTestResults = () => {
             totalStudents: response.data.data.totalStudents || 0,
           });
         } else {
-          throw new Error(response.data.message || 'API request failed');
+          throw new Error(response.data.message || "API request failed");
         }
       } catch (err) {
-        console.error('Error fetching results:', err);
-        setError(err.message || 'Failed to load results data');
+        console.error("Error fetching results:", err);
+        setError(err.message || "Failed to load results data");
       } finally {
         setLoading(false);
       }
@@ -67,8 +67,11 @@ const MockTestResults = () => {
   const overallRanking = (resultsData.tests || [])
     .reduce((acc, test) => {
       const existing = acc.find((s) => s.studentId === test.studentId);
+      const percentage = (test.marks / test.fullMarks) * 100; // Calculate percentage for this test
       if (existing) {
         existing.totalMarks += test.marks;
+        existing.totalFullMarks += test.fullMarks;
+        existing.testPercentages.push(percentage);
         existing.testsTaken += 1;
       } else {
         acc.push({
@@ -76,6 +79,8 @@ const MockTestResults = () => {
           studentName: test.studentName,
           studentEmail: test.studentEmail,
           totalMarks: test.marks,
+          totalFullMarks: test.fullMarks,
+          testPercentages: [percentage],
           testsTaken: 1,
         });
       }
@@ -83,17 +88,19 @@ const MockTestResults = () => {
     }, [])
     .map((student) => ({
       ...student,
-      averageMarks: (student.totalMarks / student.testsTaken).toFixed(2),
+      totalPercentage: (
+        student.testPercentages.reduce((sum, perc) => sum + perc, 0) / student.testsTaken
+      ).toFixed(2), // Average of all test percentages
     }))
-    .sort((a, b) => b.averageMarks - a.averageMarks)
+    .sort((a, b) => b.totalPercentage - a.totalPercentage)
     .map((student, index) => ({ ...student, rank: index + 1 }));
 
   const exportToCSV = (data, filename, headers) => {
-    const csvRows = data.map((row) => Object.values(row).map((val) => `"${val}"`).join(',')).join('\n');
+    const csvRows = data.map((row) => Object.values(row).map((val) => `"${val}"`).join(",")).join("\n");
     const csv = `${headers}\n${csvRows}`;
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     a.click();
@@ -166,14 +173,14 @@ const MockTestResults = () => {
                         exportToCSV(
                           overallRanking.map((s) => ({
                             Rank: s.rank,
-                            'Student Name': s.studentName,
-                            'Email': s.studentEmail,
-                            'Total Marks': s.totalMarks,
-                            'Tests Taken': s.testsTaken,
-                            'Average Marks': s.averageMarks,
+                            "Student Name": s.studentName,
+                            Email: s.studentEmail,
+                            "Total Marks": s.totalMarks,
+                            "Tests Taken": s.testsTaken,
+                            "Total Percentage": s.totalPercentage,
                           })),
-                          'overall_ranking.csv',
-                          'Rank,Student Name,Email,Total Marks,Tests Taken,Average Marks'
+                          "overall_ranking.csv",
+                          "Rank,Student Name,Email,Total Marks,Tests Taken,Total Percentage"
                         )
                       }
                       className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors duration-200"
@@ -201,7 +208,7 @@ const MockTestResults = () => {
                             Tests Taken
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-semibold text-blue-900 uppercase tracking-wider">
-                            Average Marks
+                            Total Percentage
                           </th>
                         </tr>
                       </thead>
@@ -227,7 +234,7 @@ const MockTestResults = () => {
                               {student.testsTaken}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                              {student.averageMarks}
+                              {student.totalPercentage}%
                             </td>
                           </tr>
                         ))}
@@ -240,9 +247,9 @@ const MockTestResults = () => {
               <div className="bg-white rounded-xl shadow-lg p-8">
                 <div className="flex justify-between items-center mb-8">
                   <h2 className="text-2xl font-semibold text-gray-800">
-                    {selectedTest} - Results{' '}
+                    {selectedTest} - Results{" "}
                     <span className="text-sm text-gray-600">
-                      (Total Questions: {selectedTestDetails.totalQuestions}, Full Marks:{' '}
+                      (Total Questions: {selectedTestDetails.totalQuestions}, Full Marks:{" "}
                       {selectedTestDetails.fullMarks}, Pass Mark: {selectedTestDetails.passMark})
                     </span>
                   </h2>
@@ -261,15 +268,15 @@ const MockTestResults = () => {
                       exportToCSV(
                         testResults.map((s) => ({
                           Rank: s.rank,
-                          'Student Name': s.studentName,
-                          'Email': s.studentEmail,
-                          'Marks': s.marks,
-                          'Percentage': s.percentage,
-                          'Completed At': new Date(s.completedAt).toLocaleString(),
-                          'Status': s.passed ? 'Passed' : 'Failed',
+                          "Student Name": s.studentName,
+                          Email: s.studentEmail,
+                          Marks: s.marks,
+                          Percentage: s.percentage,
+                          "Completed At": new Date(s.completedAt).toLocaleString(),
+                          Status: s.passed ? "Passed" : "Failed",
                         })),
                         `${selectedTest}_results.csv`,
-                        'Rank,Student Name,Email,Marks,Percentage,Completed At,Status'
+                        "Rank,Student Name,Email,Marks,Percentage,Completed At,Status"
                       )
                     }
                     className="px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors duration-200"
@@ -329,7 +336,7 @@ const MockTestResults = () => {
                             {new Date(student.completedAt).toLocaleString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {student.passed ? 'Passed' : 'Failed'}
+                            {student.passed ? "Passed" : "Failed"}
                           </td>
                         </tr>
                       ))}

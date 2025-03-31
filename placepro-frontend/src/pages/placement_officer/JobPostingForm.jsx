@@ -16,16 +16,23 @@ const JobPostingForm = () => {
     eligibility: { cgpa: "", skills: "", degreeCgpa: "", plustwoPercent: "" },
     applicationDeadline: "",
     applyLink: "",
+    isCampusDrive: false,
   });
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     if (name.startsWith("eligibility.")) {
       const field = name.split(".")[1];
       setFormData((prev) => ({
         ...prev,
         eligibility: { ...prev.eligibility, [field]: value },
+      }));
+    } else if (type === "checkbox") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: checked,
+        applyLink: checked ? "" : prev.applyLink, 
       }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
@@ -46,6 +53,11 @@ const JobPostingForm = () => {
       setLoading(false);
       return;
     }
+    if (!formData.isCampusDrive && !formData.applyLink) {
+      toast.error("Apply link is required for non-campus drives");
+      setLoading(false);
+      return;
+    }
 
     const payload = {
       title: formData.title,
@@ -58,28 +70,23 @@ const JobPostingForm = () => {
         ...(formData.eligibility.plustwoPercent && { plustwoPercent: parseFloat(formData.eligibility.plustwoPercent) }),
       },
       applicationDeadline: formData.applicationDeadline,
-      applyLink: formData.applyLink || undefined,
+      applyLink: formData.isCampusDrive ? undefined : formData.applyLink,
+      isCampusDrive: formData.isCampusDrive,
     };
 
     try {
-      const url = `${backendUrl}/api/officer/job-posting`; // Updated to match backend route
-      console.log("Current path:", window.location.pathname); // Debug
-      console.log("Request method:", "POST"); // Debug
-      console.log("Posting to:", url); // Debug
-      console.log("Payload:", payload); // Debug
-      const response = await axios.post(url, payload, {
+      const response = await axios.post(`${backendUrl}/api/officer/job-posting`, payload, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         withCredentials: true,
       });
 
       if (response.data.success) {
         toast.success("Job posted successfully!");
-        navigate("/officer/dashboard");
+        navigate("/");
       } else {
         toast.error(response.data.message || "Failed to post job");
       }
     } catch (error) {
-      console.error("Error:", error.response); // Debug
       toast.error(error.response?.data?.message || "Error posting job");
     } finally {
       setLoading(false);
@@ -98,7 +105,6 @@ const JobPostingForm = () => {
             <input
               type="text"
               name="title"
-              id="title"
               value={formData.title}
               onChange={handleChange}
               required
@@ -114,7 +120,6 @@ const JobPostingForm = () => {
             <input
               type="text"
               name="company"
-              id="company"
               value={formData.company}
               onChange={handleChange}
               required
@@ -129,7 +134,6 @@ const JobPostingForm = () => {
             </label>
             <textarea
               name="description"
-              id="description"
               value={formData.description}
               onChange={handleChange}
               required
@@ -146,7 +150,6 @@ const JobPostingForm = () => {
             <input
               type="number"
               name="eligibility.cgpa"
-              id="eligibility.cgpa"
               value={formData.eligibility.cgpa}
               onChange={handleChange}
               required
@@ -166,7 +169,6 @@ const JobPostingForm = () => {
             <input
               type="text"
               name="eligibility.skills"
-              id="eligibility.skills"
               value={formData.eligibility.skills}
               onChange={handleChange}
               required
@@ -183,7 +185,6 @@ const JobPostingForm = () => {
             <input
               type="number"
               name="eligibility.degreeCgpa"
-              id="eligibility.degreeCgpa"
               value={formData.eligibility.degreeCgpa}
               onChange={handleChange}
               min="0"
@@ -202,7 +203,6 @@ const JobPostingForm = () => {
             <input
               type="number"
               name="eligibility.plustwoPercent"
-              id="eligibility.plustwoPercent"
               value={formData.eligibility.plustwoPercent}
               onChange={handleChange}
               min="0"
@@ -221,7 +221,6 @@ const JobPostingForm = () => {
             <input
               type="date"
               name="applicationDeadline"
-              id="applicationDeadline"
               value={formData.applicationDeadline}
               onChange={handleChange}
               required
@@ -230,19 +229,34 @@ const JobPostingForm = () => {
             />
           </div>
 
+          {!formData.isCampusDrive && (
+            <div>
+              <label htmlFor="applyLink" className="block text-sm font-medium text-gray-700">
+                Application Link <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="url"
+                name="applyLink"
+                value={formData.applyLink}
+                onChange={handleChange}
+                required={!formData.isCampusDrive}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="e.g., https://techcorp.com/apply"
+              />
+            </div>
+          )}
+
           <div>
-            <label htmlFor="applyLink" className="block text-sm font-medium text-gray-700">
-              Application Link (Optional)
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                name="isCampusDrive"
+                checked={formData.isCampusDrive}
+                onChange={handleChange}
+                className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              />
+              <span className="ml-2 text-sm font-medium text-gray-700">This is a Campus Placement Drive</span>
             </label>
-            <input
-              type="url"
-              name="applyLink"
-              id="applyLink"
-              value={formData.applyLink}
-              onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="e.g., https://techcorp.com/apply"
-            />
           </div>
 
           <div>

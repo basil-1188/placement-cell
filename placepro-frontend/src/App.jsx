@@ -36,7 +36,8 @@ import TestHistory from "./pages/user/TestHistory";
 import Leaderboard from "./pages/user/LeaderBoard";
 import JobPostingForm from "./pages/placement_officer/JobPostingForm";
 import StudentJobsList from "./pages/user/StudentJobsList";
-import StudentJobDetails from "./pages/user/StudentJobDetails";
+import CampusDriveStudents from "./pages/placement_officer/CampusDriveStudentsList";
+import CampusDriveList from "./pages/placement_officer/CampusDriveList";
 
 const ProtectedRoute = ({ children, allowedRoles, isPublic = false }) => {
   const { isLogin, userData, loading } = useContext(AppContext);
@@ -123,6 +124,8 @@ const App = () => {
               <Route path="job-postings" element={<JobPostingForm />}  />
               <Route path="mock-test-attendees" element={<MockTestAttendees />} />
               <Route path="mock-test-results" element={<MockTestResults />} />
+              <Route path ='campus-drives' element={<CampusDriveList />} />
+              <Route path="campus-drive-students/:jobId" element={<CampusDriveStudents />}  />
             </Route>
             <Route
               path="/team"

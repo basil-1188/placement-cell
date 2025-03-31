@@ -1,6 +1,6 @@
 import express, { Router } from 'express'
 import userAuth from '../middleware/userAuth.js'
-import { addQuestions, checkAttendees, checkResults, getFullStudentDetailsForOfficer, getOfficerProfile, postJobOpening, publishTest, viewAllTest } from '../controllers/officerContoller.js'
+import { addQuestions, checkAttendees, checkResults, getCampusDrives, getCampusDriveStudents, getFullStudentDetailsForOfficer, getOfficerProfile, postJobOpening, publishTest, sendCampusDriveEmail, viewAllTest } from '../controllers/officerContoller.js'
 
 const officerRouter = express.Router();
 
@@ -12,5 +12,8 @@ officerRouter.put('/publish-test/:testId',userAuth,publishTest)
 officerRouter.get('/mock-test-attendees',userAuth,checkAttendees)
 officerRouter.get('/check-results',userAuth,checkResults);
 officerRouter.post('/job-posting',userAuth,postJobOpening);
+officerRouter.get('/campus-drives', userAuth, getCampusDrives);
+officerRouter.get('/campus-drive-students/:jobId', userAuth, getCampusDriveStudents);
+officerRouter.post("/send-campus-drive-email", userAuth,sendCampusDriveEmail);
 
 export default officerRouter;

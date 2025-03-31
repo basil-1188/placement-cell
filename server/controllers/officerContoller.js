@@ -1,4 +1,4 @@
-import { userModel,mockTestModel,studentModel, mockTestResultModel,jobModel } from "../models/userModel.js";
+import { userModel,mockTestModel,studentModel, mockTestResultModel,jobModel, jobApplicationModel } from "../models/userModel.js";
 import transporter from "../config/nodemailer.js";
 
 export const getOfficerProfile = async (req, res) => {
@@ -352,25 +352,21 @@ export const checkResults = async (req, res) => {
 
 export const postJobOpening = async (req, res) => {
   try {
-    console.log("Request user:", req.user);
     const officer = await userModel.findById(req.user?._id);
-    if (!officer) {
-      return res.status(401).json({ success: false, message: "Unauthorized: No user data" });
+    if (!officer || officer.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied" });
     }
 
-    if (officer.role !== "placement_officer") {
-      return res.status(403).json({ success: false, message: "Access denied: Only placement officers can post jobs" });
-    }
-
-    const { title, company, description, eligibility, applicationDeadline, applyLink } = req.body;
-    console.log("Request body:", req.body);
+    const { title, company, description, eligibility, applicationDeadline, applyLink, isCampusDrive } = req.body;
 
     if (!title || !company || !description || !eligibility || !applicationDeadline) {
       return res.status(400).json({ success: false, message: "All required fields must be provided" });
     }
-
     if (!eligibility.cgpa || !Array.isArray(eligibility.skills) || eligibility.skills.length === 0) {
       return res.status(400).json({ success: false, message: "Eligibility must include cgpa and at least one skill" });
+    }
+    if (!isCampusDrive && !applyLink) {
+      return res.status(400).json({ success: false, message: "Apply link is required for non-campus drives" });
     }
 
     const deadline = new Date(applicationDeadline);
@@ -391,27 +387,26 @@ export const postJobOpening = async (req, res) => {
       postedBy: officer._id,
       applicationDeadline: deadline,
       status: "open",
-      applyLink: applyLink || undefined,
+      applyLink: isCampusDrive ? undefined : applyLink,
+      isCampusDrive: isCampusDrive || false,
     });
 
     const savedJob = await newJob.save();
     console.log("Saved job:", savedJob);
 
     const students = await userModel.find({ role: "student" });
-    console.log("Found students:", students.length);
-
     const emailPromises = students.map((student) => {
       const mailOptions = {
         from: process.env.SENDER_EMAIL,
-        to: student.email, 
+        to: student.email,
         subject: "New Job Posting | Nirmala College MCA Placement Portal",
         html: `
           <div style="font-family: system-ui, sans-serif, Arial; font-size: 16px; background-color: #fff8f1">
             <div style="max-width: 600px; margin: auto; padding: 16px">
-              <h2 style="font-size: 20px; margin: 16px 0">New Job Posting</h2>
+              <h2 style="font-size: 20px; margin: 16px 0">${isCampusDrive ? "Campus Drive Alert" : "New Job Posting"}</h2>
               <p style="margin: 0 0 16px">Dear ${student.name || "Student"},</p>
               <p style="margin: 0 0 16px">
-                A new job opportunity has been posted on <strong>Place-Pro</strong>!
+                A new ${isCampusDrive ? "campus placement drive" : "job opportunity"} has been posted on <strong>Place-Pro</strong>!
               </p>
               <p style="margin: 0 0 16px">
                 <strong>Role:</strong> ${title}<br />
@@ -419,7 +414,12 @@ export const postJobOpening = async (req, res) => {
                 <strong>Last Date to Apply:</strong> ${deadline.toDateString()}
               </p>
               <p style="margin: 0 0 16px">
-                Kindly log in to the <strong>Place-Pro</strong> portal to check your eligibility and apply for this position.
+                Log in to <strong>Place-Pro</strong> to check eligibility and apply.
+                ${
+                  isCampusDrive
+                    ? "You’ll be redirected to an application form within the portal."
+                    : `Apply here: <a href="${applyLink}" target="_blank">${applyLink}</a>`
+                }
               </p>
               <p style="margin: 0">
                 Best regards,<br />
@@ -429,7 +429,6 @@ export const postJobOpening = async (req, res) => {
           </div>
         `,
       };
-
       return transporter.sendMail(mailOptions).catch((error) => {
         console.error(`Failed to send email to ${student.email}:`, error.message);
       });
@@ -448,3 +447,106 @@ export const postJobOpening = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };
+
+export const getCampusDrives = async (req, res) => {
+  try {
+    const officer = await userModel.findById(req.user?._id);
+    if (!officer || officer.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied: Placement officer role required" });
+    }
+
+    const campusDrives = await jobModel.find({ isCampusDrive: true }).select("title company applicationDeadline");
+    if (!campusDrives || campusDrives.length === 0) {
+      return res.status(200).json({ success: true, message: "No campus drives found", data: [] });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Campus drives fetched successfully",
+      data: campusDrives,
+    });
+  } catch (error) {
+    console.error("Error in getCampusDrives:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const getCampusDriveStudents = async (req, res) => {
+  try {
+    const officer = await userModel.findById(req.user?._id);
+    if (!officer || officer.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied: Placement officer role required" });
+    }
+
+    const { jobId } = req.params; 
+    const registeredStudents = await jobApplicationModel
+      .find({ jobId }, "studentId jobId")
+      .populate("studentId", "name email")
+      .populate("jobId", "title company")
+      .lean();
+
+    if (!registeredStudents || registeredStudents.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No students registered for this campus drive",
+        data: [],
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Registered students fetched successfully",
+      data: registeredStudents,
+    });
+  } catch (error) {
+    console.error("Error in getCampusDriveStudents:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const sendCampusDriveEmail = async (req, res) => {
+  try {
+    const officer = await userModel.findById(req.user?._id);
+    if (!officer || officer.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied: Placement officer role required" });
+    }
+
+    const { jobId, subject, message, recipients } = req.body;
+    if (!jobId || !subject || !message || !recipients || recipients.length === 0) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    const mailOptions = {
+      from: process.env.SMTP_USER, 
+      to: recipients.join(", "), 
+      subject: `[Campus Drive Update] ${subject}`,
+      html: `
+        <div style="font-family: system-ui, sans-serif, Arial; font-size: 16px; background-color: #fff8f1;">
+          <div style="max-width: 600px; margin: auto; padding: 16px;">
+            <h2 style="font-size: 20px; margin: 16px 0; color: #1f2937;">Campus Drive Update</h2>
+            <p style="margin: 0 0 16px;">Dear Applicants,</p>
+            <p style="margin: 0 0 16px;">
+              We have an important update regarding the <strong>${req.body.jobTitle || "Campus Drive"}</strong> at <strong>${req.body.company || "Nirmala College"}</strong>.
+            </p>
+            <p style="margin: 0 0 16px; white-space: pre-wrap;">${message}</p>
+            <p style="margin: 0 0 16px;">
+              Please prepare accordingly and reach out to the placement team if you have any questions.
+            </p>
+            <p style="margin: 0;">
+              Best regards,<br />
+              <strong>Nirmala College MCA Placement Team</strong>
+            </p>
+          </div>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    return res.status(200).json({ success: true, message: "Email sent successfully" });
+  } catch (error) {
+    console.error("Error in sendCampusDriveEmail:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Error sending email" });
+  }
+};
+
+export default { sendCampusDriveEmail };

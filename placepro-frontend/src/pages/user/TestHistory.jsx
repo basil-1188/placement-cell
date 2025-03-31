@@ -66,7 +66,7 @@ const TestHistory = () => {
   };
 
   const toggleRow = (index) => {
-    setExpandedRow(expandedRow === index ? null : index); // Toggle expansion
+    setExpandedRow(expandedRow === index ? null : index); 
   };
 
   if (loading) {
@@ -101,7 +101,7 @@ const TestHistory = () => {
     <div className="min-h-screen mt-15 bg-gradient-to-br from-gray-100 to-gray-200 py-12 px-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-10">
-          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
+          <h1 className="text-4xl  font-extrabold text-gray-900 tracking-tight">
             TEST RESULTS
           </h1>
           {testHistory.length > 0 && (

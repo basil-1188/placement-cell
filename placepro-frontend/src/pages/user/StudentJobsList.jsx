@@ -1,12 +1,13 @@
-// components/student/StudentJobsList.jsx
 import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../context/AppContext.jsx";
 import { FaBriefcase, FaBuilding, FaCalendarAlt, FaChevronDown, FaLink, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 
 const StudentJobsList = () => {
   const { backendUrl } = useContext(AppContext);
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
   const [studentMarks, setStudentMarks] = useState(null);
@@ -14,27 +15,21 @@ const StudentJobsList = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log("Backend URL:", backendUrl);
     const fetchData = async () => {
       try {
-        console.log("Fetching jobs from:", `${backendUrl}/api/user/get-job-openings`);
         const jobResponse = await axios.get(`${backendUrl}/api/user/get-job-openings`, {
           withCredentials: true,
         });
-        console.log("Job Response:", jobResponse.data);
         if (jobResponse.data.success) {
           setJobs(jobResponse.data.data || []);
-          console.log("Jobs set:", jobResponse.data.data || []);
         } else {
           toast.error(jobResponse.data.message || "Failed to fetch jobs");
           setJobs([]);
         }
 
-        console.log("Fetching marks from:", `${backendUrl}/api/user/marks`);
         const marksResponse = await axios.get(`${backendUrl}/api/user/marks`, {
           withCredentials: true,
         });
-        console.log("Marks Response:", marksResponse.data);
         if (marksResponse.data.success) {
           setStudentMarks(marksResponse.data.marks);
         } else {
@@ -50,7 +45,6 @@ const StudentJobsList = () => {
         }
       } finally {
         setLoading(false);
-        console.log("Loading set to false, jobs:", jobs);
       }
     };
 
@@ -59,7 +53,6 @@ const StudentJobsList = () => {
 
   useEffect(() => {
     if (selectedJob && studentMarks) {
-      console.log("Validating eligibility for:", selectedJob);
       const validateEligibility = () => {
         let eligible = true;
         let message = "";
@@ -100,13 +93,36 @@ const StudentJobsList = () => {
     setIsEligible(null);
   };
 
-  const handleApplyLinkClick = (e, url) => {
+  const handleApplyClick = async (e, job) => {
     e.preventDefault();
-    const confirmRedirect = window.confirm(
-      "You are being redirected to an external site. Please ensure it’s safe before proceeding. Continue?"
-    );
-    if (confirmRedirect) {
-      window.open(url, "_blank", "noopener,noreferrer");
+    e.stopPropagation();
+    if (job.isCampusDrive) {
+      try {
+        const response = await axios.post(
+          `${backendUrl}/api/user/apply-campus-drive`,
+          { jobId: job._id },
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+            withCredentials: true,
+          }
+        );
+        if (response.data.success) {
+          toast.success("Application submitted successfully!");
+          // Optionally navigate back to jobs list or stay on the page
+          // navigate("/user/jobs"); // Uncomment if you want to redirect
+        } else {
+          toast.error(response.data.message || "Failed to apply");
+        }
+      } catch (error) {
+        toast.error(error.response?.data?.message || "Error applying for campus drive");
+      }
+    } else if (job.applyLink) {
+      const confirmRedirect = window.confirm(
+        "You are being redirected to an external site. Please ensure it’s safe before proceeding. Continue?"
+      );
+      if (confirmRedirect) {
+        window.open(job.applyLink, "_blank", "noopener,noreferrer");
+      }
     }
   };
 
@@ -188,18 +204,16 @@ const StudentJobsList = () => {
                           )}
                         </ul>
                       </div>
-                      {job.applyLink && (
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-800">Apply Now</h3>
-                          <a
-                            href={job.applyLink}
-                            onClick={(e) => handleApplyLinkClick(e, job.applyLink)}
-                            className="inline-flex items-center mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                          >
-                            <FaLink className="mr-2" /> Apply
-                          </a>
-                        </div>
-                      )}
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800">Apply Now</h3>
+                        <button
+                          onClick={(e) => handleApplyClick(e, job)}
+                          className="inline-flex items-center mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                        >
+                          <FaLink className="mr-2" />
+                          {job.isCampusDrive ? "Apply for Campus Drive" : "Apply Externally"}
+                        </button>
+                      </div>
                       {isEligible !== null && (
                         <div className="mt-6 p-4 rounded-lg bg-white shadow-inner">
                           <h3 className="text-lg font-semibold text-gray-800 flex items-center">

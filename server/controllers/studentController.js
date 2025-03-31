@@ -1,4 +1,4 @@
-import { userModel, studentModel,mockTestModel,mockTestResultModel,jobModel } from "../models/userModel.js";
+import { userModel, studentModel,mockTestModel,mockTestResultModel,jobModel,jobApplicationModel } from "../models/userModel.js";
 import { uploadToCloudinary } from "../utils/Cloudinary.js";
 
 export const addStudentDetails = async (req, res) => {
@@ -588,9 +588,9 @@ export const jobOpening = async (req, res) => {
 
   try {
     const jobs = await jobModel.find({ status: "open" }).select(
-      "title company description eligibility applicationDeadline applyLink"
+      "title company description eligibility applicationDeadline applyLink isCampusDrive" // Add isCampusDrive
     );
-    console.log("Fetched jobs:", jobs); 
+    console.log("Fetched jobs:", jobs);
 
     if (!jobs || jobs.length === 0) {
       return res.status(200).json({ success: true, message: "No open job postings found", data: [] });
@@ -606,6 +606,7 @@ export const jobOpening = async (req, res) => {
     res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };
+
 export const getStudentMarks = async (req, res) => {
   const studentId = req.user?._id;
   if (!studentId) {
@@ -628,6 +629,37 @@ export const getStudentMarks = async (req, res) => {
     return res.status(200).json({ success: true, marks });
   } catch (error) {
     console.error("getStudentMarks error:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const applyForCampusDrive = async (req, res) => {
+  try {
+    const student = await userModel.findById(req.user?._id);
+    if (!student || student.role !== "student") {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    const { jobId } = req.body;
+    const job = await jobModel.findById(jobId);
+    if (!job || !job.isCampusDrive) {
+      return res.status(400).json({ success: false, message: "Invalid or non-campus drive job" });
+    }
+
+    const existingApplication = await jobApplicationModel.findOne({ jobId, studentId: student._id });
+    if (existingApplication) {
+      return res.status(400).json({ success: false, message: "You have already applied" });
+    }
+
+    const application = new jobApplicationModel({
+      jobId,
+      studentId: student._id,
+    });
+    await application.save();
+
+    return res.status(201).json({ success: true, message: "Application submitted successfully" });
+  } catch (error) {
+    console.error("Error in applyForCampusDrive:", error.stack);
     return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };

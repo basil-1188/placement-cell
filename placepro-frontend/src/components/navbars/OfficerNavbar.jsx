@@ -33,7 +33,15 @@ const OfficerNavbar = () => {
             { path: "/officer/view-all-test", label: "View All Tests" },
           ],
         },
-        { path: "/officer/job-postings", label: "JOB OPENINGS" },
+        { 
+          path: "/jobs",
+          label: "JOBS",
+          dropdown: [
+            { path: "/officer/job-postings", label: "JOB OPENINGS" },
+            { path: "/officer/announcements", label: "ANNOUNCEMENTS" },
+            { path: "/officer/campus-drives", label: "CAMPUS DRIVES" }
+          ],
+         },
         { path: "/officer/student-details", label: "STUDENTS LIST" },
       ];
     }

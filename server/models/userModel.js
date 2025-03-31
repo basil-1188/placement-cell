@@ -223,10 +223,14 @@ const jobSchema = new mongoose.Schema(
     applyLink: {
       type: String,
       trim: true,
-      match: [
-        /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
-        "Please provide a valid URL",
-      ],
+      match: [/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/, "Please provide a valid URL"],
+      required: function () {
+        return !this.isCampusDrive; 
+      },
+    },
+    isCampusDrive: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }
@@ -234,5 +238,27 @@ const jobSchema = new mongoose.Schema(
 
 const jobModel = mongoose.models.Job || mongoose.model("Job", jobSchema);
 
+// models/index.js
+const jobApplicationSchema = new mongoose.Schema(
+  {
+    jobId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Job",
+      required: [true, "Job ID is required"],
+    },
+    studentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      required: [true, "Student ID is required"],
+    },
+    submittedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { timestamps: true }
+);
 
-export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel };
+const jobApplicationModel = mongoose.models.JobApplication || mongoose.model("JobApplication", jobApplicationSchema);
+
+export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel,jobApplicationModel };
