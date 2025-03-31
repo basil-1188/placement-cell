@@ -1,6 +1,7 @@
 import express, { Router } from 'express'
 import userAuth from '../middleware/userAuth.js'
-import { addQuestions, checkAttendees, checkResults, getCampusDrives, getCampusDriveStudents, getFullStudentDetailsForOfficer, getOfficerProfile, postJobOpening, publishTest, sendCampusDriveEmail, viewAllTest } from '../controllers/officerContoller.js'
+import { addQuestions, checkAttendees, checkResults, createBlog, deleteBlog, getBlogs, getCampusDrives, getCampusDriveStudents, getFullStudentDetailsForOfficer, getOfficerProfile, postJobOpening, publishTest, sendCampusDriveEmail, updateBlog, viewAllTest } from '../controllers/officerContoller.js'
+import { uploadProfileImage } from '../middleware/multer.js';
 
 const officerRouter = express.Router();
 
@@ -15,5 +16,9 @@ officerRouter.post('/job-posting',userAuth,postJobOpening);
 officerRouter.get('/campus-drives', userAuth, getCampusDrives);
 officerRouter.get('/campus-drive-students/:jobId', userAuth, getCampusDriveStudents);
 officerRouter.post("/send-campus-drive-email", userAuth,sendCampusDriveEmail);
+officerRouter.get("/blogs", userAuth, getBlogs);
+officerRouter.post("/blogs", userAuth, uploadProfileImage.single("image"), createBlog);
+officerRouter.put("/blogs/:blogId", userAuth, uploadProfileImage.single("image"), updateBlog);
+officerRouter.delete("/blogs/:blogId", userAuth, deleteBlog);
 
 export default officerRouter;

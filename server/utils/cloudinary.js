@@ -16,37 +16,36 @@ export const uploadToCloudinary = (file, folderType, publicId = null) => {
   return new Promise((resolve, reject) => {
     let folderPath;
     let resourceType;
-    let fileName;
 
     if (folderType === "profile") {
       folderPath = "place-pro/profile";
       resourceType = "image";
-      fileName = `${publicId || file.originalname.split(".")[0]}.${file.mimetype.split("/")[1]}`; // e.g., jpg, png
     } else if (folderType === "resumes") {
       folderPath = "place-pro/resumes";
       resourceType = "raw";
-      fileName = `${publicId || file.originalname.split(".")[0]}.pdf`; // Force .pdf extension for resumes
+    } else if (folderType === "blogs") {
+      folderPath = "place-pro/blogs";
+      resourceType = "image";
     } else {
-      reject(new Error("Invalid folderType: Must be 'profile' or 'resumes'"));
+      reject(new Error("Invalid folderType. Must be 'profile', 'resumes', or 'blogs'"));
       return;
     }
+
+    const options = {
+      resource_type: resourceType,
+      folder: folderPath,
+      public_id: publicId || `${file.originalname.split(".")[0]}_${Date.now()}`,
+      overwrite: true,
+      access_mode: "public",
+    };
 
     console.log("Uploading file to Cloudinary:", {
       originalName: file.originalname,
       size: file.size,
       mimetype: file.mimetype,
       folder: folderPath,
-      fileName,
+      public_id: options.public_id,
     });
-
-    const options = {
-      resource_type: resourceType,
-      folder: folderPath,
-      public_id: `${publicId || file.originalname.split(".")[0]}_${Date.now()}`, // Unique public ID
-      overwrite: true,
-      format: folderType === "resumes" ? "pdf" : undefined, // Explicitly set format for resumes
-      access_mode: "public", // Ensure public access
-    };
 
     cloudinary.uploader
       .upload_stream(options, (error, result) => {

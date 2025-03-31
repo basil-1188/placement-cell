@@ -1,5 +1,6 @@
-import { userModel,mockTestModel,studentModel, mockTestResultModel,jobModel, jobApplicationModel } from "../models/userModel.js";
+import { userModel,mockTestModel,studentModel, mockTestResultModel,jobModel, jobApplicationModel,Blog } from "../models/userModel.js";
 import transporter from "../config/nodemailer.js";
+import { uploadToCloudinary } from "../utils/Cloudinary.js";
 
 export const getOfficerProfile = async (req, res) => {
   try {
@@ -549,4 +550,121 @@ export const sendCampusDriveEmail = async (req, res) => {
   }
 };
 
-export default { sendCampusDriveEmail };
+export const getBlogs = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied: Placement officer role required" });
+    }
+
+    const blogs = await Blog.find({ author: req.user._id }).sort({ updatedAt: -1 });
+    return res.status(200).json({ success: true, message: "Blogs fetched successfully", data: blogs });
+  } catch (error) {
+    console.error("Error in getBlogs (officer):", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const createBlog = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied: Placement officer role required" });
+    }
+
+    const { title, content, tags } = req.body;
+    if (!title || !content) {
+      return res.status(400).json({ success: false, message: "Title and content are required" });
+    }
+
+    console.log("Received file:", req.file); // Debug log
+    let imageUrl = "";
+    if (req.file) {
+      try {
+        imageUrl = await uploadToCloudinary(req.file, "blogs", `${user._id}_blog_${Date.now()}`);
+      } catch (uploadError) {
+        console.error("Cloudinary upload failed:", uploadError);
+        return res.status(500).json({ success: false, message: "Failed to upload image" });
+      }
+    }
+
+    const blog = new Blog({
+      title,
+      content,
+      author: req.user._id,
+      status: "draft",
+      tags: Array.isArray(tags) ? tags : tags ? tags.split(",").map((tag) => tag.trim()) : [],
+      image: imageUrl,
+    });
+    await blog.save();
+
+    return res.status(201).json({ success: true, message: "Blog created successfully", data: blog });
+  } catch (error) {
+    console.error("Error in createBlog (officer):", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const updateBlog = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied: Placement officer role required" });
+    }
+
+    const { blogId } = req.params;
+    const { title, content, status, tags } = req.body;
+
+    console.log("Received file for update:", req.file); // Debug log
+    let imageUrl;
+    if (req.file) {
+      try {
+        imageUrl = await uploadToCloudinary(req.file, "blogs", `${user._id}_blog_${Date.now()}`);
+      } catch (uploadError) {
+        console.error("Cloudinary upload failed:", uploadError);
+        return res.status(500).json({ success: false, message: "Failed to upload image" });
+      }
+    }
+
+    const blog = await Blog.findOneAndUpdate(
+      { _id: blogId, author: req.user._id },
+      {
+        title,
+        content,
+        status,
+        tags: Array.isArray(tags) ? tags : tags ? tags.split(",").map((tag) => tag.trim()) : undefined,
+        image: imageUrl || undefined,
+        updatedAt: Date.now(),
+      },
+      { new: true }
+    );
+    if (!blog) {
+      return res.status(404).json({ success: false, message: "Blog not found or not authorized" });
+    }
+
+    return res.status(200).json({ success: true, message: "Blog updated successfully", data: blog });
+  } catch (error) {
+    console.error("Error in updateBlog (officer):", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const deleteBlog = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "placement_officer") {
+      return res.status(403).json({ success: false, message: "Access denied: Placement officer role required" });
+    }
+
+    const { blogId } = req.params;
+    const blog = await Blog.findOneAndDelete({ _id: blogId, author: req.user._id });
+    if (!blog) {
+      return res.status(404).json({ success: false, message: "Blog not found or not authorized" });
+    }
+
+    return res.status(200).json({ success: true, message: "Blog deleted successfully" });
+  } catch (error) {
+    console.error("Error in deleteBlog (officer):", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};

@@ -38,6 +38,9 @@ import JobPostingForm from "./pages/placement_officer/JobPostingForm";
 import StudentJobsList from "./pages/user/StudentJobsList";
 import CampusDriveStudents from "./pages/placement_officer/CampusDriveStudentsList";
 import CampusDriveList from "./pages/placement_officer/CampusDriveList";
+import OfficerBlogDashboard from "./pages/placement_officer/OfficerBlogDashboard";
+import StudentBlogList from "./pages/user/StudentBlogList";
+import BlogDetail from "./pages/user/BlogDetail";
 
 const ProtectedRoute = ({ children, allowedRoles, isPublic = false }) => {
   const { isLogin, userData, loading } = useContext(AppContext);
@@ -90,6 +93,8 @@ const App = () => {
               <Route path="profile" element={<Profile />} />
               <Route path="upload-details" element={<StudentDetailsForm />} />
               <Route path="jobs" element={<StudentJobsList />} />
+              <Route path="blogs" element={<StudentBlogList />} />
+              <Route path="blogs/:blogId" element={<BlogDetail />} />
               <Route path="mock-tests">
                 <Route path="take-test" element={<TakeTestList />} />
                 <Route path="take-test/:id" element={<TakeTest />} />
@@ -122,6 +127,7 @@ const App = () => {
               <Route path="student-details" element={<StudentLists />} />
               <Route path="view-all-test" element={<ViewAllTest />} />
               <Route path="job-postings" element={<JobPostingForm />}  />
+              <Route path="blogs" element={<OfficerBlogDashboard />} />
               <Route path="mock-test-attendees" element={<MockTestAttendees />} />
               <Route path="mock-test-results" element={<MockTestResults />} />
               <Route path ='campus-drives' element={<CampusDriveList />} />

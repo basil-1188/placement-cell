@@ -13,7 +13,7 @@ const profileImageFilter = (req, file, cb) => {
 const resumeFilter = (req, file, cb) => {
   const allowedMimeTypes = [
     "application/pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // DOCX
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", 
     "application/msword", // DOC
   ];
 
@@ -26,12 +26,12 @@ const resumeFilter = (req, file, cb) => {
 
 export const uploadProfileImage = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 }, 
   fileFilter: profileImageFilter,
 });
 
 export const uploadResume = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 }, 
   fileFilter: resumeFilter,
 });

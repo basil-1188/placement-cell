@@ -1,4 +1,4 @@
-import { userModel, studentModel,mockTestModel,mockTestResultModel,jobModel,jobApplicationModel } from "../models/userModel.js";
+import { userModel, studentModel,mockTestModel,mockTestResultModel,jobModel,jobApplicationModel,Blog } from "../models/userModel.js";
 import { uploadToCloudinary } from "../utils/Cloudinary.js";
 
 export const addStudentDetails = async (req, res) => {
@@ -660,6 +660,43 @@ export const applyForCampusDrive = async (req, res) => {
     return res.status(201).json({ success: true, message: "Application submitted successfully" });
   } catch (error) {
     console.error("Error in applyForCampusDrive:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const getStudentBlogs = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "student") {
+      return res.status(403).json({ success: false, message: "Access denied: Student role required" });
+    }
+
+    const blogs = await Blog.find({ status: "published" })
+      .populate("author", "name") 
+      .sort({ updatedAt: -1 });
+    return res.status(200).json({ success: true, message: "Published blogs fetched successfully", data: blogs });
+  } catch (error) {
+    console.error("Error in getStudentBlogs:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const getBlogById = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "student") {
+      return res.status(403).json({ success: false, message: "Access denied: Student role required" });
+    }
+
+    const { blogId } = req.params;
+    const blog = await Blog.findOne({ _id: blogId, status: "published" }).populate("author", "name");
+    if (!blog) {
+      return res.status(404).json({ success: false, message: "Blog not found or not published" });
+    }
+
+    return res.status(200).json({ success: true, message: "Blog fetched successfully", data: blog });
+  } catch (error) {
+    console.error("Error in getBlogById:", error.stack);
     return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };

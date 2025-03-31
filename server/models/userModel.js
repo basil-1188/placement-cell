@@ -261,4 +261,17 @@ const jobApplicationSchema = new mongoose.Schema(
 
 const jobApplicationModel = mongoose.models.JobApplication || mongoose.model("JobApplication", jobApplicationSchema);
 
-export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel,jobApplicationModel };
+const blogSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  content: { type: String, required: true },
+  author: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
+  status: { type: String, enum: ["draft", "published"], default: "draft" },
+  tags: [{ type: String }],
+  image: { type: String },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+});
+
+const Blog = mongoose.models.Blog || mongoose.model("Blog", blogSchema);
+
+export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel,jobApplicationModel,Blog };

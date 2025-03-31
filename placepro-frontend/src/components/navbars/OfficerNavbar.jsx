@@ -22,7 +22,7 @@ const OfficerNavbar = () => {
 
     if (userData.role === "placement_officer") {
       return [
-        { path: "/blogs", label: "BLOG" },
+        { path: "/officer/blogs", label: "BLOG" },
         {
           path: "/mock-tests",
           label: "MOCK TESTS",

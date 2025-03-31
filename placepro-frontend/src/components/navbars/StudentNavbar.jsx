@@ -1,24 +1,31 @@
 import React, { useState, useEffect, useContext, useMemo } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom"; // Add useNavigate
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios"; // Add axios import
 import logo from "../../assets/logo.png";
 import { AppContext } from "../../context/AppContext";
 
 const StudentNavbar = () => {
   const { userData, backendUrl, logout } = useContext(AppContext);
-  const navigate = useNavigate(); // Add this for logout navigation
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [hasTest, setHasTest] = useState(false);
   const [dropdownStates, setDropdownStates] = useState({});
 
   useEffect(() => {
-    fetch(`${backendUrl}/api/mock-tests/schedule`)
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("StudentNavbar - Fetched test schedule:", data);
-        setHasTest(data.success);
-      })
-      .catch((error) => console.error("Error fetching schedule:", error));
+    const fetchSchedule = async () => {
+      try {
+        const response = await axios.get(`${backendUrl}/api/mock-tests/schedule`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          withCredentials: true,
+        });
+        console.log("StudentNavbar - Fetched test schedule:", response.data);
+        setHasTest(response.data.success);
+      } catch (error) {
+        console.error("Error fetching schedule:", error.response ? error.response.data : error.message);
+      }
+    };
+    fetchSchedule();
   }, [backendUrl]);
 
   console.log("StudentNavbar - userData:", userData);
@@ -34,12 +41,12 @@ const StudentNavbar = () => {
 
     if (userData.role === "student") {
       return [
-        { path: "/blogs", label: "BLOG" },
+        { path: "/user/blogs", label: "BLOG" },
         {
           path: "/mock-tests",
           label: "MOCK TESTS",
           dropdown: [
-            { path: "/user/mock-tests/take-test", label: "Take Test" }, 
+            { path: "/user/mock-tests/take-test", label: "Take Test", condition: hasTest },
             { path: "/user/mock-tests/test-history", label: "Past Results" },
             { path: "/user/mock-tests/ranks", label: "Leaderboard Rankings" },
           ],
