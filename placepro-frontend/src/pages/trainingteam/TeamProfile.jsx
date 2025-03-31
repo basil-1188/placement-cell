@@ -19,8 +19,11 @@ const TeamProfile = () => {
 
     const fetchProfile = async () => {
       try {
+        const token = localStorage.getItem("token"); // Get token from localStorage
+        console.log("Fetching profile with token:", token); // Debug
         const response = await axios.get(`${backendUrl}/api/team/profile`, {
-          withCredentials: true,
+          headers: { Authorization: `Bearer ${token}` }, // Add token to header
+          withCredentials: true, // Keep this if your backend also uses cookies
         });
         if (response.data.success) {
           setProfile(response.data.profileData);
@@ -29,7 +32,7 @@ const TeamProfile = () => {
           navigate("/team");
         }
       } catch (error) {
-        console.error("Error fetching team profile:", error);
+        console.error("Error fetching team profile:", error.response ? error.response.data : error.message);
         toast.error(error.response?.data?.message || "Error fetching team profile");
         navigate("/team");
       } finally {

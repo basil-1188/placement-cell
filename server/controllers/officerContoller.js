@@ -554,17 +554,29 @@ export const getBlogs = async (req, res) => {
   try {
     const user = await userModel.findById(req.user?._id);
     if (!user || user.role !== "placement_officer") {
-      return res.status(403).json({ success: false, message: "Access denied: Placement officer role required" });
+      return res.status(403).json({ success: false, message: "Access denied: Placement Officer role required" });
     }
 
-    const blogs = await Blog.find({ author: req.user._id }).sort({ updatedAt: -1 });
+    const blogs = await Blog.find({
+      $or: [
+        { 
+          status: "published", 
+          author: { $in: await userModel.find({ role: { $in: ["placement_officer", "training_team"] } }).distinct("_id") }
+        },
+        { author: req.user._id, status: "draft" },
+      ],
+    })
+      .populate("author", "name role")
+      .sort({ updatedAt: -1 });
+
+    console.log("Fetched blogs count:", blogs.length);
+    console.log("Blogs data:", blogs);
     return res.status(200).json({ success: true, message: "Blogs fetched successfully", data: blogs });
   } catch (error) {
-    console.error("Error in getBlogs (officer):", error.stack);
+    console.error("Error in getBlogs:", error.stack);
     return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };
-
 export const createBlog = async (req, res) => {
   try {
     const user = await userModel.findById(req.user?._id);
@@ -577,7 +589,7 @@ export const createBlog = async (req, res) => {
       return res.status(400).json({ success: false, message: "Title and content are required" });
     }
 
-    console.log("Received file:", req.file); // Debug log
+    console.log("Received file:", req.file);  
     let imageUrl = "";
     if (req.file) {
       try {

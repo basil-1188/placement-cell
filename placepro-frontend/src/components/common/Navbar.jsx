@@ -10,7 +10,7 @@ const Navbar = () => {
   const navItems = [
     { path: "/login", label: "SIGN IN" },
     { path: "/register", label: "REGISTER" },
-    { path: "/service", label: "SERVICEŚ" },
+    { path: "/services", label: "SERVICEŚ" },
   ];
 
   return (

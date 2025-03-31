@@ -5,7 +5,7 @@ import { AppContext } from "../../context/AppContext.jsx";
 import { FaPlus, FaEdit, FaTrash, FaPaperPlane } from "react-icons/fa";
 import BlogModal from "./BlogModal";
 
-const OfficerBlogDashboard = () => {
+const TeamBlogDashboard = () => {
   const { backendUrl, userData } = useContext(AppContext);
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,15 +14,15 @@ const OfficerBlogDashboard = () => {
 
   useEffect(() => {
     console.log("userData:", userData);
-    if (!userData || userData.role !== "placement_officer") {
-      toast.error("Access denied. Placement Officer role required.");
+    if (!userData || userData.role !== "training_team") {
+      toast.error("Access denied. Training Team role required.");
       window.location.href = "/login";
       return;
     }
 
     const fetchBlogs = async () => {
       try {
-        const response = await axios.get(`${backendUrl}/api/officer/blogs`, {
+        const response = await axios.get(`${backendUrl}/api/team/blogs`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           withCredentials: true,
         });
@@ -49,7 +49,7 @@ const OfficerBlogDashboard = () => {
     }
     if (!window.confirm("Are you sure you want to delete this blog?")) return;
     try {
-      const response = await axios.delete(`${backendUrl}/api/officer/blogs/${blogId}`, {
+      const response = await axios.delete(`${backendUrl}/api/team/blogs/${blogId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         withCredentials: true,
       });
@@ -72,7 +72,7 @@ const OfficerBlogDashboard = () => {
     }
     try {
       const response = await axios.put(
-        `${backendUrl}/api/officer/blogs/${blogId}`,
+        `${backendUrl}/api/team/blogs/${blogId}`,
         { status: "published" },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -111,7 +111,7 @@ const OfficerBlogDashboard = () => {
     <div className="min-h-screen mt-14 bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Placement Officer Blog Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Training Team Blog Dashboard</h1>
           <button
             onClick={() => openModal()}
             className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition-all duration-200"
@@ -122,7 +122,7 @@ const OfficerBlogDashboard = () => {
 
         {blogs.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <p className="text-gray-500 text-lg">No blogs available yet. Start by adding a new post!</p>
+            <p className="text-gray-500 text-lg">No blogs created yet. Start by adding a new post!</p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -210,7 +210,7 @@ const OfficerBlogDashboard = () => {
             onClose={() => setShowModal(false)}
             onSave={(updatedBlogs) => setBlogs(updatedBlogs)}
             backendUrl={backendUrl}
-            apiBase="/api/officer"
+            apiBase="/api/team"
           />
         )}
       </div>
@@ -218,4 +218,4 @@ const OfficerBlogDashboard = () => {
   );
 };
 
-export default OfficerBlogDashboard;
+export default TeamBlogDashboard;

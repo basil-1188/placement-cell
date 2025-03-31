@@ -16,13 +16,12 @@ const TeamNavbar = () => {
       return [
         { path: "/login", label: "SIGN IN" },
         { path: "/register", label: "REGISTER" },
-        { path: "/blogs", label: "BLOG" },
       ];
     }
 
     if (userData.role === "training_team") {
       return [
-        { path: "/blogs", label: "BLOG" },
+        { path: "/team/blogs", label: "BLOG" },
         {
           path: "/study-materials",
           label: "STUDY MATERIALS",
@@ -32,7 +31,6 @@ const TeamNavbar = () => {
             { path: "/study-materials/qa", label: "Questions & Answers" },
           ],
         },
-        { path: "/upload-videos", label: "UPLOAD VIDEOS" },
         { path: "/resume-review", label: "RESUME REVIEW" },
       ];
     }

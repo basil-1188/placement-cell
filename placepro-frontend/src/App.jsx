@@ -41,6 +41,8 @@ import CampusDriveList from "./pages/placement_officer/CampusDriveList";
 import OfficerBlogDashboard from "./pages/placement_officer/OfficerBlogDashboard";
 import StudentBlogList from "./pages/user/StudentBlogList";
 import BlogDetail from "./pages/user/BlogDetail";
+import TeamBlogDashboard from "./pages/trainingteam/TeamBlogDashboard";
+import Services from "./pages/common/Services";
 
 const ProtectedRoute = ({ children, allowedRoles, isPublic = false }) => {
   const { isLogin, userData, loading } = useContext(AppContext);
@@ -76,11 +78,11 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
-            <Route path="/blogs" element={<Blogs />} />
             <Route path="/contact_us" element={<Contact />} />
             <Route path="/about_us" element={<AboutUs />} />
             <Route path="/login" element={<AuthForm />} />
             <Route path="/register" element={<AuthForm />} />
+            <Route path="/services" element={<Services />} />
             <Route
               path="/user"
               element={
@@ -142,6 +144,7 @@ const App = () => {
               }
             >
               <Route path="profile" element={<TeamProfile />} />
+              <Route path="blogs" element={<TeamBlogDashboard />} />
             </Route>
           </Routes>
         </main>
