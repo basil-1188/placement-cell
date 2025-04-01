@@ -1,5 +1,5 @@
-import { userModel, studentModel,mockTestModel,mockTestResultModel,jobModel,jobApplicationModel,Blog } from "../models/userModel.js";
-import { uploadToCloudinary } from "../utils/Cloudinary.js";
+import { userModel, studentModel,mockTestModel,mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial } from "../models/userModel.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 
 export const addStudentDetails = async (req, res) => {
   try {
@@ -697,6 +697,24 @@ export const getBlogById = async (req, res) => {
     return res.status(200).json({ success: true, message: "Blog fetched successfully", data: blog });
   } catch (error) {
     console.error("Error in getBlogById:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const getUserMaterials = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "student") {
+      return res.status(403).json({ success: false, message: "Access denied: Student role required" });
+    }
+
+    const materials = await StudyMaterial.find({ status: "published", type: "study_material" })
+      .select("title content description tags thumbnail createdAt updatedAt")
+      .lean(); 
+
+    return res.status(200).json({ success: true, data: materials });
+  } catch (error) {
+    console.error("Error in getUserMaterials:", error.stack);
     return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };

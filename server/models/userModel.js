@@ -274,4 +274,28 @@ const blogSchema = new mongoose.Schema({
 
 const Blog = mongoose.models.Blog || mongoose.model("Blog", blogSchema);
 
-export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel,jobApplicationModel,Blog };
+const studyMaterialSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  type: { type: String, enum: ["study_material", "video", "live_class"], required: true },
+  content: { type: String, required: true },
+  author: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
+  isLive: { type: Boolean, default: false },
+  schedule: { type: Date, required: function() { return this.isLive; } },
+  description: { type: String },
+  tags: [{ type: String }],
+  status: { type: String, enum: ["draft", "published"], default: "draft" },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+  thumbnail: { type: String }
+});
+
+studyMaterialSchema.pre("save", function(next) {
+  if (this.isModified()) {
+    this.updatedAt = Date.now();
+  }
+  next();
+});
+
+const StudyMaterial = mongoose.models.StudyMaterial || mongoose.model("StudyMaterial", studyMaterialSchema);
+
+export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial };

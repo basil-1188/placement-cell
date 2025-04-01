@@ -43,6 +43,8 @@ import StudentBlogList from "./pages/user/StudentBlogList";
 import BlogDetail from "./pages/user/BlogDetail";
 import TeamBlogDashboard from "./pages/trainingteam/TeamBlogDashboard";
 import Services from "./pages/common/Services";
+import Materials from "./pages/trainingteam/Materials"
+import MaterialsUser from "./pages/user/MaterialsUser";
 
 const ProtectedRoute = ({ children, allowedRoles, isPublic = false }) => {
   const { isLogin, userData, loading } = useContext(AppContext);
@@ -97,6 +99,7 @@ const App = () => {
               <Route path="jobs" element={<StudentJobsList />} />
               <Route path="blogs" element={<StudentBlogList />} />
               <Route path="blogs/:blogId" element={<BlogDetail />} />
+              <Route path="study-resources" element={<MaterialsUser />} />
               <Route path="mock-tests">
                 <Route path="take-test" element={<TakeTestList />} />
                 <Route path="take-test/:id" element={<TakeTest />} />
@@ -145,6 +148,7 @@ const App = () => {
             >
               <Route path="profile" element={<TeamProfile />} />
               <Route path="blogs" element={<TeamBlogDashboard />} />
+              <Route path="resources" element={<Materials />} />
             </Route>
           </Routes>
         </main>

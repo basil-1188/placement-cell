@@ -56,7 +56,7 @@ const StudentNavbar = () => {
           path: "/study-materials",
           label: "STUDY MATERIALS",
           dropdown: [
-            { path: "/study-materials/resources", label: "Materials" },
+            { path: "/user/study-resources", label: "Materials" },
             { path: "/study-materials/videos", label: "Videos" },
             { path: "/study-materials/qa", label: "Questions & Answers" },
           ],

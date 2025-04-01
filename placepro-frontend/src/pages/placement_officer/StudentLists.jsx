@@ -171,7 +171,6 @@ const StudentLists = () => {
 
 export default StudentLists;
 
-// Ensure this CSS is in your global stylesheet (e.g., src/index.css)
 const styles = `
   .animate-fade-in {
     animation: fadeIn 0.3s ease-in;

@@ -6,12 +6,6 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-/**
- * @param {Object} file - Multer file object
- * @param {string} folderType - "profile" for profile images, "resumes" for resumes
- * @param {string} [publicId] - Optional public ID for the file (e.g., user email or admnNo)
- * @returns {Promise<string>} - Secure URL of uploaded file
- */
 export const uploadToCloudinary = (file, folderType, publicId = null) => {
   return new Promise((resolve, reject) => {
     let folderPath;
@@ -26,17 +20,29 @@ export const uploadToCloudinary = (file, folderType, publicId = null) => {
     } else if (folderType === "blogs") {
       folderPath = "place-pro/blogs";
       resourceType = "image";
+    } else if (folderType === "study-materials") {
+      folderPath = "place-pro/study-materials";
+      resourceType = "raw"; 
+    } else if (folderType === "study-materials-thumbnails") {
+      folderPath = "place-pro/study-materials/thumbnails";
+      resourceType = "image";
     } else {
-      reject(new Error("Invalid folderType. Must be 'profile', 'resumes', or 'blogs'"));
+      console.error(`Invalid folderType received: ${folderType}`);
+      reject(new Error("Invalid folderType"));
       return;
     }
+
+    const baseName = file.originalname.replace(/\.[^/.]+$/, "");
+    const sanitizedName = baseName.replace(/[^a-zA-Z0-9-_]/g, "_");
 
     const options = {
       resource_type: resourceType,
       folder: folderPath,
-      public_id: publicId || `${file.originalname.split(".")[0]}_${Date.now()}`,
+      public_id: publicId || `${sanitizedName}_${Date.now()}`,
       overwrite: true,
       access_mode: "public",
+      attachment: false,
+      format: folderType === "study-materials" ? "pdf" : undefined, 
     };
 
     console.log("Uploading file to Cloudinary:", {
@@ -45,6 +51,7 @@ export const uploadToCloudinary = (file, folderType, publicId = null) => {
       mimetype: file.mimetype,
       folder: folderPath,
       public_id: options.public_id,
+      format: options.format,
     });
 
     cloudinary.uploader
@@ -54,7 +61,7 @@ export const uploadToCloudinary = (file, folderType, publicId = null) => {
           reject(new Error(`Failed to upload file to Cloudinary: ${error.message}`));
         } else {
           console.log("File uploaded to Cloudinary:", result.secure_url);
-          resolve(result.secure_url);
+          resolve(result.secure_url); // Return raw secure_url, no modifications
         }
       })
       .end(file.buffer);
