@@ -2,10 +2,13 @@ import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { AppContext } from "../../context/AppContext";
+import { FaSearch } from "react-icons/fa";
 
 const MaterialsUser = () => {
   const { backendUrl, userData } = useContext(AppContext);
   const [materials, setMaterials] = useState([]);
+  const [filteredMaterials, setFilteredMaterials] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,6 +26,7 @@ const MaterialsUser = () => {
         });
         if (response.data.success) {
           setMaterials(response.data.data);
+          setFilteredMaterials(response.data.data);
         } else {
           toast.error(response.data.message || "Failed to fetch materials");
         }
@@ -34,6 +38,19 @@ const MaterialsUser = () => {
     };
     fetchMaterials();
   }, [backendUrl, userData]);
+
+  const handleSearchChange = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+    const filtered = materials.filter(
+      (material) =>
+        material.title.toLowerCase().includes(query) ||
+        (material.description && material.description.toLowerCase().includes(query)) ||
+        material.tags.some((tag) => tag.toLowerCase().includes(query)) ||
+        material.content.toLowerCase().includes(query)
+    );
+    setFilteredMaterials(filtered);
+  };
 
   const handleDownload = (materialUrl, materialTitle) => {
     const link = document.createElement("a");
@@ -60,7 +77,6 @@ const MaterialsUser = () => {
   return (
     <div className="min-h-screen mt-8 bg-gradient-to-br from-blue-50 to-gray-100 py-16 px-6">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">
             Learning Resources
@@ -68,22 +84,36 @@ const MaterialsUser = () => {
           <p className="mt-3 text-lg text-gray-600 max-w-2xl mx-auto">
             Access top-tier study materials designed to boost your skills and knowledge.
           </p>
+          <div className="flex items-center justify-center gap-4 mt-6 max-w-3xl mx-auto">
+            <div className="relative flex-grow">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search materials by title, description, or tags..."
+                className="w-full p-3 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-800 placeholder-gray-500 transition-all duration-200"
+              />
+              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+            </div>
+          </div>
         </div>
 
-        {/* Materials Grid */}
-        {materials.length === 0 ? (
+        {filteredMaterials.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-10 text-center">
-            <h2 className="text-2xl font-semibold text-gray-800">No Resources Available</h2>
-            <p className="mt-2 text-gray-500">Check back later for new study materials!</p>
+            <h2 className="text-2xl font-semibold text-gray-800">
+              {searchQuery ? "No matching materials found" : "No Resources Available"}
+            </h2>
+            <p className="mt-2 text-gray-500">
+              {searchQuery ? "Try a different search term." : "Check back later for new study materials!"}
+            </p>
           </div>
         ) : (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {materials.map((material) => (
+            {filteredMaterials.map((material) => (
               <div
                 key={material._id}
                 className="bg-white rounded-xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
               >
-                {/* Thumbnail or Placeholder */}
                 <div className="relative h-48">
                   {material.thumbnail ? (
                     <img
@@ -100,8 +130,6 @@ const MaterialsUser = () => {
                     Published
                   </span>
                 </div>
-
-                {/* Content */}
                 <div className="p-6">
                   <h2 className="text-xl font-semibold text-gray-900 line-clamp-1 mb-2">
                     {material.title}

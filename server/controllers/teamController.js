@@ -456,3 +456,146 @@ export const deleteVideo = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };
+
+export const uploadQA = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "training_team") {
+      return res.status(403).json({ success: false, message: "Access denied: Training Team role required" });
+    }
+
+    const { title, content, description, tags } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({ success: false, message: "Title and content are required" });
+    }
+
+    const qaData = {
+      title,
+      type: "qa", 
+      content,
+      description,
+      tags: tags ? tags.split(",").map((tag) => tag.trim()) : [],
+      author: req.user._id,
+    };
+
+    let qa;
+    if (req.params.id) {
+      qa = await StudyMaterial.findOne({ _id: req.params.id, type: "qa" });
+      if (!qa) {
+        return res.status(404).json({ success: false, message: "Q&A not found" });
+      }
+      if (qa.author.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ success: false, message: "You can only edit your own Q&A" });
+      }
+      Object.assign(qa, qaData);
+    } else {
+      qa = new StudyMaterial(qaData);
+    }
+
+    await qa.save();
+    const populatedQA = await StudyMaterial.findById(qa._id).populate("author", "name role");
+    return res.status(req.params.id ? 200 : 201).json({
+      success: true,
+      message: req.params.id ? "Q&A updated successfully" : "Q&A uploaded successfully",
+      data: populatedQA,
+    });
+  } catch (error) {
+    console.error("Error in uploadQA:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const getStudentQA = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "student") {
+      return res.status(403).json({ success: false, message: "Access denied: Student role required" });
+    }
+
+    const qas = await StudyMaterial.find({ type: "qa", status: "published" })
+      .populate("author", "name role")
+      .sort({ updatedAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      message: "Q&A fetched successfully",
+      data: qas,
+    });
+  } catch (error) {
+    console.error("Error in getStudentQA:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const getTeamQA = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "training_team") {
+      return res.status(403).json({ success: false, message: "Access denied: Training Team role required" });
+    }
+
+    const qas = await StudyMaterial.find({ type: "qa" })
+      .populate("author", "name role")
+      .sort({ updatedAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      message: "Q&A fetched successfully",
+      data: qas,
+    });
+  } catch (error) {
+    console.error("Error in getTeamQA:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const deleteQA = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "training_team") {
+      return res.status(403).json({ success: false, message: "Access denied: Training Team role required" });
+    }
+
+    const qa = await StudyMaterial.findOne({ _id: req.params.id, type: "qa" });
+    if (!qa) {
+      return res.status(404).json({ success: false, message: "Q&A not found" });
+    }
+    if (qa.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "You can only delete your own Q&A" });
+    }
+
+    await StudyMaterial.deleteOne({ _id: qa._id, type: "qa" });
+    return res.status(200).json({ success: true, message: "Q&A deleted successfully" });
+  } catch (error) {
+    console.error("Error in deleteQA:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const publishQA = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "training_team") {
+      return res.status(403).json({ success: false, message: "Access denied: Training Team role required" });
+    }
+
+    const qa = await StudyMaterial.findOne({ _id: req.params.id, type: "qa" });
+    if (!qa) {
+      return res.status(404).json({ success: false, message: "Q&A not found" });
+    }
+    if (qa.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "You can only publish your own Q&A" });
+    }
+
+    qa.status = "published";
+    qa.updatedAt = Date.now();
+    await qa.save();
+
+    const populatedQA = await StudyMaterial.findById(qa._id).populate("author", "name role");
+    return res.status(200).json({ success: true, message: "Q&A published successfully", data: populatedQA });
+  } catch (error) {
+    console.error("Error in publishQA:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};

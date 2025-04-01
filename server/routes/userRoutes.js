@@ -2,7 +2,7 @@ import express from 'express';
 import userAuth from '../middleware/userAuth.js';
 import { getUserData } from '../controllers/userController.js';
 import { uploadResume } from '../middleware/multer.js';
-import { addStudentDetails, applyForCampusDrive, attendMockTest, getAvailableMockTests, getBlogById, getRanks, getStudentBlogs, getStudentDetails, getStudentMarks, getUserMaterials, jobOpening, pastResults, showUserVideos, submitMockTest } from '../controllers/studentController.js';
+import { addStudentDetails, applyForCampusDrive, attendMockTest, getAvailableMockTests, getBlogById, getRanks, getStudentBlogs, getStudentDetails, getStudentMarks, getStudentQA, getUserMaterials, jobOpening, pastResults, showUserVideos, submitMockTest } from '../controllers/studentController.js';
 import { getCampusDriveStudents } from '../controllers/officerContoller.js';
 
 const userRouter = express.Router();
@@ -23,4 +23,6 @@ userRouter.get('/student-blogs',userAuth,getStudentBlogs)
 userRouter.get('/blogs/:blogId', userAuth, getBlogById);
 userRouter.get('/user-materials', userAuth, getUserMaterials);
 userRouter.get('/user-videos',userAuth,showUserVideos);
+userRouter.get('/qa',userAuth,getStudentQA);
+
 export default userRouter;

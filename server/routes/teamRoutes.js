@@ -1,6 +1,6 @@
 import express from 'express'
 import userAuth from '../middleware/userAuth.js'
-import { createMaterial, createTeamBlog, deleteMaterial, deleteTeamBlog, deleteVideo, getMaterials, getTeamBlogs, getTeamProfile, getVideos, updateMaterial, updateTeamBlog, updateVideo, uploadVideos } from '../controllers/teamController.js'
+import { createMaterial, createTeamBlog, deleteMaterial, deleteQA, deleteTeamBlog, deleteVideo, getMaterials, getTeamBlogs, getTeamProfile, getTeamQA, getVideos, publishQA, updateMaterial, updateTeamBlog, updateVideo, uploadQA, uploadVideos } from '../controllers/teamController.js'
 import { uploadProfileImage, uploadStudyMaterial, uploadVideo } from '../middleware/multer.js';
 
 const teamRouter = express.Router();
@@ -32,4 +32,9 @@ teamRouter.put("/videos/:id", userAuth, uploadVideo.fields([
 ]), updateVideo);
 teamRouter.get("/videos", userAuth, getVideos);
 teamRouter.delete("/videos/:id", userAuth, deleteVideo);
+teamRouter.post("/qa", userAuth, uploadQA); 
+teamRouter.put("/qa/:id", userAuth, uploadQA); 
+teamRouter.get("/qa", userAuth, getTeamQA); 
+teamRouter.delete("/qa/:id", userAuth, deleteQA); 
+teamRouter.put("/qa/publish/:id", userAuth, publishQA);
 export default teamRouter;

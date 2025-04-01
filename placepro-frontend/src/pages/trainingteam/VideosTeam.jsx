@@ -2,11 +2,13 @@ import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { AppContext } from "../../context/AppContext";
-import { FaPlus, FaEdit, FaTrash, FaTimes, FaPaperPlane, FaChevronDown, FaChevronUp, FaVideo, FaSpinner } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaTimes, FaPaperPlane, FaChevronDown, FaChevronUp, FaVideo, FaSpinner, FaSearch } from "react-icons/fa";
 
 const VideosTeam = () => {
   const { backendUrl, userData } = useContext(AppContext);
   const [videos, setVideos] = useState([]);
+  const [filteredVideos, setFilteredVideos] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [videoType, setVideoType] = useState("youtube");
@@ -22,7 +24,7 @@ const VideosTeam = () => {
   const [expandedVideo, setExpandedVideo] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
-  const [existingFiles, setExistingFiles] = useState([]); // To store current video URLs
+  const [existingFiles, setExistingFiles] = useState([]);
 
   useEffect(() => {
     if (!userData || userData.role !== "training_team") {
@@ -41,6 +43,7 @@ const VideosTeam = () => {
       });
       if (response.data.success) {
         setVideos(response.data.data);
+        setFilteredVideos(response.data.data);
       } else {
         toast.error(response.data.message || "Failed to fetch videos");
       }
@@ -49,6 +52,18 @@ const VideosTeam = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearchChange = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+    const filtered = videos.filter((video) =>
+      video.title.toLowerCase().includes(query) ||
+      (video.description && video.description.toLowerCase().includes(query)) ||
+      video.tags.some((tag) => tag.toLowerCase().includes(query)) ||
+      video.content.toLowerCase().includes(query)
+    );
+    setFilteredVideos(filtered);
   };
 
   const handleInputChange = (e) => {
@@ -146,7 +161,7 @@ const VideosTeam = () => {
       files: [null, null, null],
     });
     if (video.source === "upload") {
-      setExistingFiles(video.content.split(",")); // Store existing video URLs
+      setExistingFiles(video.content.split(","));
     } else {
       setExistingFiles([]);
     }
@@ -211,25 +226,39 @@ const VideosTeam = () => {
     <div className="min-h-screen mt-8 bg-gradient-to-br from-blue-50 to-gray-100 py-16 px-6">
       <div className="max-w-6xl mx-auto relative">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">Manage Training Videos</h1>
-          <p className="mt-3 text-lg text-gray-600 max-w-2xl mx-auto">
-            Create, edit, and publish video resources for your students.
-          </p>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="mt-6 inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            <FaPlus className="mr-2" /> Add New Video
-          </button>
-        </div>
+            <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">Manage Training Videos</h1>
+            <p className="mt-3 text-lg text-gray-600 max-w-2xl mx-auto">
+                Create, edit, and publish video resources for your students.
+            </p>
+            <div className="flex items-center justify-center gap-4 mt-6 max-w-3xl mx-auto">
+                <div className="relative flex-grow">
+                <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    placeholder="Search videos by title, description, or tags..."
+                    className="w-full p-3 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-800 placeholder-gray-500 transition-all duration-200"
+                />
+                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+                </div>
+                <button
+                onClick={() => setIsModalOpen(true)}
+                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 whitespace-nowrap"
+                >
+                <FaPlus className="mr-2" /> Add New Video
+                </button>
+            </div>
+            </div>
 
-        {videos.length === 0 ? (
+        {filteredVideos.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <p className="text-gray-600 text-lg font-medium">No videos available yet. Start by adding one!</p>
+            <p className="text-gray-600 text-lg font-medium">
+              {searchQuery ? "No matching videos found" : "No videos available yet. Start by adding one!"}
+            </p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {videos.map((video) => (
+            {filteredVideos.map((video) => (
               <div
                 key={video._id}
                 className="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300 hover:shadow-xl"
@@ -414,7 +443,7 @@ const VideosTeam = () => {
                         onChange={handleYoutubeUrlChange}
                         placeholder="YouTube URL"
                         className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50 text-gray-800 placeholder-gray-500 transition-all duration-200"
-                        required={!editingId} // Required only for new uploads
+                        required={!editingId}
                       />
                     </div>
                     <div>
@@ -469,7 +498,7 @@ const VideosTeam = () => {
                           onChange={handleFileChange(0)}
                           accept="video/*"
                           className="w-full p-3 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition-all duration-200"
-                          required={!editingId} // Required only for new uploads
+                          required={!editingId}
                         />
                       </div>
                     ) : (
@@ -489,7 +518,7 @@ const VideosTeam = () => {
                             onChange={handleFileChange(index)}
                             accept="video/*"
                             className="w-full p-3 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition-all duration-200"
-                            required={index === 0 && !editingId} // Required only for first file on new upload
+                            required={index === 0 && !editingId}
                           />
                         </div>
                       ))

@@ -47,6 +47,8 @@ import Materials from "./pages/trainingteam/Materials"
 import MaterialsUser from "./pages/user/MaterialsUser";
 import VideosTeam from "./pages/trainingteam/VideosTeam";
 import UserVideos from "./pages/user/UserVideos";
+import TeamQA from "./pages/trainingteam/TeamQA";
+import StudentQA from "./pages/user/StudentQA";
 
 const ProtectedRoute = ({ children, allowedRoles, isPublic = false }) => {
   const { isLogin, userData, loading } = useContext(AppContext);
@@ -103,6 +105,7 @@ const App = () => {
               <Route path="blogs/:blogId" element={<BlogDetail />} />
               <Route path="study-resources" element={<MaterialsUser />} />
               <Route path="videos" element={<UserVideos />} />
+              <Route path="qa" element={<StudentQA />} />
               <Route path="mock-tests">
                 <Route path="take-test" element={<TakeTestList />} />
                 <Route path="take-test/:id" element={<TakeTest />} />
@@ -153,6 +156,7 @@ const App = () => {
               <Route path="blogs" element={<TeamBlogDashboard />} />
               <Route path="resources" element={<Materials />} />
               <Route path="videos" element={<VideosTeam />} />
+              <Route path="Q-A" element={<TeamQA />} />
 
             </Route>
           </Routes>

@@ -2,11 +2,13 @@ import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { AppContext } from "../../context/AppContext";
-import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaSearch } from "react-icons/fa";
 
 const Materials = () => {
   const { backendUrl, userData } = useContext(AppContext);
   const [materials, setMaterials] = useState([]);
+  const [filteredMaterials, setFilteredMaterials] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
@@ -26,6 +28,7 @@ const Materials = () => {
         });
         if (response.data.success) {
           setMaterials(response.data.data);
+          setFilteredMaterials(response.data.data);
         } else {
           toast.error(response.data.message || "Failed to fetch materials");
         }
@@ -37,6 +40,18 @@ const Materials = () => {
     };
     fetchMaterials();
   }, [backendUrl, userData]);
+
+  const handleSearchChange = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+    const filtered = materials.filter((material) =>
+      material.title.toLowerCase().includes(query) ||
+      (material.description && material.description.toLowerCase().includes(query)) ||
+      material.tags.some((tag) => tag.toLowerCase().includes(query)) ||
+      material.content.toLowerCase().includes(query)
+    );
+    setFilteredMaterials(filtered);
+  };
 
   const handleDelete = async (materialId) => {
     const material = materials.find((m) => m._id === materialId);
@@ -52,6 +67,7 @@ const Materials = () => {
       });
       if (response.data.success) {
         setMaterials(materials.filter((m) => m._id !== materialId));
+        setFilteredMaterials(filteredMaterials.filter((m) => m._id !== materialId));
         toast.success("Material deleted successfully");
       } else {
         toast.error(response.data.message || "Failed to delete material");
@@ -78,6 +94,7 @@ const Materials = () => {
       );
       if (response.data.success) {
         setMaterials(materials.map((m) => (m._id === materialId ? { ...m, status: "published" } : m)));
+        setFilteredMaterials(filteredMaterials.map((m) => (m._id === materialId ? { ...m, status: "published" } : m)));
         toast.success("Material published successfully");
       } else {
         toast.error(response.data.message || "Failed to publish material");
@@ -99,8 +116,10 @@ const Materials = () => {
   const handleSave = (updatedMaterial) => {
     if (selectedMaterial) {
       setMaterials(materials.map((m) => (m._id === updatedMaterial._id ? updatedMaterial : m)));
+      setFilteredMaterials(filteredMaterials.map((m) => (m._id === updatedMaterial._id ? updatedMaterial : m)));
     } else {
       setMaterials([...materials, updatedMaterial]);
+      setFilteredMaterials([...filteredMaterials, updatedMaterial]);
     }
     setShowModal(false);
   };
@@ -126,27 +145,41 @@ const Materials = () => {
           <p className="mt-3 text-lg text-gray-600 max-w-2xl mx-auto">
             Create, edit, and publish resources for your students.
           </p>
-          <button
-            onClick={() => openModal()}
-            className="mt-6 inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            <FaPlus className="mr-2" /> Add New Material
-          </button>
+          <div className="flex items-center justify-center gap-4 mt-6 max-w-3xl mx-auto">
+            <div className="relative flex-grow">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search materials by title, description, or tags..."
+                className="w-full p-3 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-800 placeholder-gray-500 transition-all duration-200"
+              />
+              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+            </div>
+            <button
+              onClick={() => openModal()}
+              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 whitespace-nowrap"
+            >
+              <FaPlus className="mr-2" /> Add New Material
+            </button>
+          </div>
         </div>
-
-        {materials.length === 0 ? (
+        {filteredMaterials.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-10 text-center">
-            <h2 className="text-2xl font-semibold text-gray-800">No Materials Available</h2>
-            <p className="mt-2 text-gray-500">Start by adding a new study material!</p>
+            <h2 className="text-2xl font-semibold text-gray-800">
+              {searchQuery ? "No matching materials found" : "No Materials Available"}
+            </h2>
+            <p className="mt-2 text-gray-500">
+              {searchQuery ? "Try a different search term." : "Start by adding a new study material!"}
+            </p>
           </div>
         ) : (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {materials.map((material) => (
+            {filteredMaterials.map((material) => (
               <div
                 key={material._id}
                 className="bg-white rounded-xl shadow-md overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
               >
-                {/* Thumbnail or Placeholder */}
                 <div className="relative h-48">
                   {material.thumbnail ? (
                     <img
@@ -167,8 +200,6 @@ const Materials = () => {
                     {material.status.charAt(0).toUpperCase() + material.status.slice(1)}
                   </span>
                 </div>
-
-                {/* Content */}
                 <div className="p-6">
                   <h2 className="text-xl font-semibold text-gray-900 line-clamp-1 mb-2">
                     {material.title}
@@ -236,7 +267,6 @@ const Materials = () => {
           </div>
         )}
 
-        {/* Modal */}
         {showModal && (
           <MaterialModal
             material={selectedMaterial}

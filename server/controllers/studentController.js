@@ -740,3 +740,25 @@ export const showUserVideos = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };
+
+export const getStudentQA = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "student") {
+      return res.status(403).json({ success: false, message: "Access denied: Student role required" });
+    }
+
+    const qas = await StudyMaterial.find({ type: "qa", status: "published" })
+      .populate("author", "name role")
+      .sort({ updatedAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      message: "Q&A fetched successfully",
+      data: qas,
+    });
+  } catch (error) {
+    console.error("Error in getStudentQA:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};

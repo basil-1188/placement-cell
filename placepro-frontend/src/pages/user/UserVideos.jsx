@@ -2,12 +2,14 @@ import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { AppContext } from "../../context/AppContext";
-import { FaChevronDown, FaChevronUp, FaVideo } from "react-icons/fa";
+import { FaChevronDown, FaChevronUp, FaVideo, FaSearch } from "react-icons/fa";
 import ReactPlayer from "react-player";
 
 const UserVideos = () => {
   const { backendUrl, userData } = useContext(AppContext);
   const [videos, setVideos] = useState([]);
+  const [filteredVideos, setFilteredVideos] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [expandedVideo, setExpandedVideo] = useState(null);
 
@@ -28,6 +30,7 @@ const UserVideos = () => {
       });
       if (response.data.success) {
         setVideos(response.data.data);
+        setFilteredVideos(response.data.data);
       } else {
         toast.error(response.data.message || "Failed to fetch videos");
       }
@@ -36,6 +39,19 @@ const UserVideos = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearchChange = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+    const filtered = videos.filter(
+      (video) =>
+        video.title.toLowerCase().includes(query) ||
+        (video.description && video.description.toLowerCase().includes(query)) ||
+        video.tags.some((tag) => tag.toLowerCase().includes(query)) ||
+        video.content.toLowerCase().includes(query)
+    );
+    setFilteredVideos(filtered);
   };
 
   const toggleExpand = (id) => {
@@ -58,15 +74,29 @@ const UserVideos = () => {
           <p className="mt-3 text-lg text-gray-600 max-w-2xl mx-auto">
             Explore video resources prepared for your learning.
           </p>
+          <div className="flex items-center justify-center gap-4 mt-6 max-w-3xl mx-auto">
+            <div className="relative flex-grow">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search videos by title, description, or tags..."
+                className="w-full p-3 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-800 placeholder-gray-500 transition-all duration-200"
+              />
+              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+            </div>
+          </div>
         </div>
 
-        {videos.length === 0 ? (
+        {filteredVideos.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <p className="text-gray-600 text-lg font-medium">No videos available yet.</p>
+            <p className="text-gray-600 text-lg font-medium">
+              {searchQuery ? "No matching videos found" : "No videos available yet."}
+            </p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {videos.map((video) => (
+            {filteredVideos.map((video) => (
               <div
                 key={video._id}
                 className="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300 hover:shadow-xl"
