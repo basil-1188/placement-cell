@@ -2,7 +2,7 @@ import express from 'express';
 import userAuth from '../middleware/userAuth.js';
 import { getUserData } from '../controllers/userController.js';
 import { uploadResume } from '../middleware/multer.js';
-import { addStudentDetails, applyForCampusDrive, attendMockTest, getAvailableMockTests, getBlogById, getRanks, getStudentBlogs, getStudentDetails, getStudentMarks, getUserMaterials, jobOpening, pastResults, submitMockTest } from '../controllers/studentController.js';
+import { addStudentDetails, applyForCampusDrive, attendMockTest, getAvailableMockTests, getBlogById, getRanks, getStudentBlogs, getStudentDetails, getStudentMarks, getUserMaterials, jobOpening, pastResults, showUserVideos, submitMockTest } from '../controllers/studentController.js';
 import { getCampusDriveStudents } from '../controllers/officerContoller.js';
 
 const userRouter = express.Router();
@@ -21,5 +21,6 @@ userRouter.post('/apply-campus-drive', userAuth,applyForCampusDrive);
 userRouter.get('/campus-drive-students',userAuth,getCampusDriveStudents);
 userRouter.get('/student-blogs',userAuth,getStudentBlogs)
 userRouter.get('/blogs/:blogId', userAuth, getBlogById);
-userRouter.get("/user-materials", userAuth, getUserMaterials);
+userRouter.get('/user-materials', userAuth, getUserMaterials);
+userRouter.get('/user-videos',userAuth,showUserVideos);
 export default userRouter;

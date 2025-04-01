@@ -1,7 +1,7 @@
-import { userModel, Blog, StudyMaterial } from "../models/userModel.js";
-import { uploadToCloudinary } from "../utils/cloudinary.js";
+import { userModel, Blog, StudyMaterial,Video } from "../models/userModel.js";
+import { uploadToCloudinary,deleteFromCloudinary } from "../utils/cloudinary.js";
 
-const getTeamProfile = async (req, res) => {
+export const getTeamProfile = async (req, res) => {
   try {
     const userId = req.user?._id;
     if (!userId) {
@@ -22,7 +22,7 @@ const getTeamProfile = async (req, res) => {
   }
 };
 
-const getTeamBlogs = async (req, res) => {
+export const getTeamBlogs = async (req, res) => {
   try {
     const user = await userModel.findById(req.user?._id);
     if (!user || user.role !== "training_team") {
@@ -38,7 +38,7 @@ const getTeamBlogs = async (req, res) => {
   }
 };
 
-const createTeamBlog = async (req, res) => {
+export const createTeamBlog = async (req, res) => {
   try {
     const user = await userModel.findById(req.user?._id);
     if (!user || user.role !== "training_team") {
@@ -68,7 +68,7 @@ const createTeamBlog = async (req, res) => {
   }
 };
 
-const updateTeamBlog = async (req, res) => {
+export const updateTeamBlog = async (req, res) => {
   try {
     const user = await userModel.findById(req.user?._id);
     if (!user || user.role !== "training_team") {
@@ -95,7 +95,7 @@ const updateTeamBlog = async (req, res) => {
   }
 };
 
-const deleteTeamBlog = async (req, res) => {
+export const deleteTeamBlog = async (req, res) => {
   try {
     const user = await userModel.findById(req.user?._id);
     if (!user || user.role !== "training_team") {
@@ -113,7 +113,7 @@ const deleteTeamBlog = async (req, res) => {
   }
 };
 
-const getMaterials = async (req, res) => {
+export const getMaterials = async (req, res) => {
   try {
     const user = await userModel.findById(req.user?._id);
     if (!user || user.role !== "training_team") {
@@ -129,7 +129,7 @@ const getMaterials = async (req, res) => {
   }
 };
 
-const createMaterial = async (req, res) => {
+export const createMaterial = async (req, res) => {
   try {
     const user = await userModel.findById(req.user?._id);
     if (!user || user.role !== "training_team") {
@@ -156,7 +156,7 @@ const createMaterial = async (req, res) => {
       author: req.user._id,
       description,
       tags: tags ? tags.split(",").map(tag => tag.trim()) : [],
-      thumbnail: thumbnailUrl || null, // Allow null if no thumbnail
+      thumbnail: thumbnailUrl || null,
     });
 
     await material.save();
@@ -169,7 +169,7 @@ const createMaterial = async (req, res) => {
   }
 };
 
-const updateMaterial = async (req, res) => {
+export const updateMaterial = async (req, res) => {
   try {
     const user = await userModel.findById(req.user?._id);
     if (!user || user.role !== "training_team") {
@@ -202,7 +202,7 @@ const updateMaterial = async (req, res) => {
   }
 };
 
-const deleteMaterial = async (req, res) => {
+export const deleteMaterial = async (req, res) => {
   try {
     const user = await userModel.findById(req.user?._id);
     if (!user || user.role !== "training_team") {
@@ -223,14 +223,236 @@ const deleteMaterial = async (req, res) => {
   }
 };
 
-export {
-  getTeamProfile,
-  getTeamBlogs,
-  createTeamBlog,
-  updateTeamBlog,
-  deleteTeamBlog,
-  getMaterials,
-  createMaterial,
-  updateMaterial,
-  deleteMaterial,
+export const uploadVideos = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "training_team") {
+      return res.status(403).json({ success: false, message: "Access denied: Training Team role required" });
+    }
+
+    const { title, youtubeUrl, description, tags } = req.body;
+    const maxDuration = 600;
+
+    if (youtubeUrl) {
+      if (!youtubeUrl.includes("youtube.com") && !youtubeUrl.includes("youtu.be")) {
+        return res.status(400).json({ success: false, message: "Invalid YouTube URL" });
+      }
+
+      let durationSeconds;
+      try {
+        const videoId = youtubeUrl.split("v=")[1]?.split("&")[0] || youtubeUrl.split("/")[3];
+        const apiKey = process.env.YOUTUBE_API_KEY;
+        const response = await axios.get(
+          `https://youtube.googleapis.com/youtube/v3/videos?part=contentDetails&id=${videoId}&key=${apiKey}`
+        );
+        const durationISO = response.data.items[0]?.contentDetails.duration;
+        durationSeconds = durationISO ? parseISO8601Duration(durationISO) : undefined;
+      } catch (error) {
+        console.warn("Could not fetch YouTube duration:", error.message);
+      }
+
+      if (durationSeconds > maxDuration) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Video exceeds 10 minutes. Please reduce the duration to 10 minutes or less. If the topic is incomplete, split it into multiple ≤10-minute parts (e.g., 'Topic 1 - Part 1', 'Topic 1 - Part 2') and upload separately.",
+        });
+      }
+
+      const video = new Video({
+        title,
+        type: "video",
+        content: youtubeUrl,
+        source: "youtube",
+        duration: durationSeconds,
+        description,
+        tags: tags ? tags.split(",").map((tag) => tag.trim()) : [],
+        author: req.user._id,
+      });
+      await video.save();
+      return res.status(201).json({ success: true, message: "Video uploaded successfully", data: video });
+    } else {
+      const files = [];
+      if (req.files?.file0?.[0]) files.push(req.files.file0[0]);
+      if (req.files?.file1?.[0]) files.push(req.files.file1[0]);
+      if (req.files?.file2?.[0]) files.push(req.files.file2[0]);
+
+      if (files.length === 0) {
+        return res.status(400).json({ success: false, message: "At least one video file or YouTube URL required" });
+      }
+
+      const uploadResults = await Promise.all(files.map((file) => uploadToCloudinary(file, "videos")));
+      for (const result of uploadResults) {
+        if (result.duration > maxDuration) {
+          await Promise.all(uploadResults.map((r) => deleteFromCloudinary(r.public_id, "video")));
+          return res.status(400).json({
+            success: false,
+            message: "One or more videos exceed 10 minutes. Please reduce each part to 10 minutes or less.",
+          });
+        }
+      }
+
+      const totalDuration = uploadResults.reduce((sum, r) => sum + r.duration, 0); // Sum durations
+
+      const video = new Video({
+        title,
+        type: "video",
+        content: uploadResults.map((r) => r.url).join(","),
+        publicIds: uploadResults.map((r) => r.public_id),
+        source: "upload",
+        duration: totalDuration,
+        description,
+        tags: tags ? tags.split(",").map((tag) => tag.trim()) : [],
+        author: req.user._id,
+      });
+      await video.save();
+      return res.status(201).json({ success: true, message: "Video uploaded successfully", data: video });
+    }
+  } catch (error) {
+    console.error("Error in uploadVideos:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const getVideos = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "training_team") {
+      return res.status(403).json({ success: false, message: "Access denied: Training Team role required" });
+    }
+    const videos = await Video.find({ $or: [{ status: "published" }, { author: req.user._id, status: "draft" }] })
+      .populate("author", "name role")
+      .sort({ updatedAt: -1 });
+    return res.status(200).json({ success: true, message: "Videos fetched successfully", data: videos });
+  } catch (error) {
+    console.error("Error in getVideos:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const updateVideo = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "training_team") {
+      return res.status(403).json({ success: false, message: "Access denied: Training Team role required" });
+    }
+    const video = await Video.findById(req.params.id);
+    if (!video) {
+      return res.status(404).json({ success: false, message: "Video not found" });
+    }
+    if (video.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "You can only update your own videos" });
+    }
+
+    const { title, youtubeUrl, description, tags, status } = req.body;
+    const maxDuration = 600;
+
+    let content = video.content;
+    let publicIds = video.publicIds || [];
+    let source = video.source;
+    let duration = video.duration;
+
+    if (youtubeUrl) {
+      if (!youtubeUrl.includes("youtube.com") && !youtubeUrl.includes("youtu.be")) {
+        return res.status(400).json({ success: false, message: "Invalid YouTube URL" });
+      }
+      content = youtubeUrl;
+      source = "youtube";
+      if (video.source === "upload" && video.publicIds.length > 0) {
+        await Promise.all(video.publicIds.map((id) => deleteFromCloudinary(id, "video")));
+      }
+      publicIds = [];
+      try {
+        const videoId = youtubeUrl.split("v=")[1]?.split("&")[0] || youtubeUrl.split("/")[3];
+        const apiKey = process.env.YOUTUBE_API_KEY;
+        const response = await axios.get(
+          `https://youtube.googleapis.com/youtube/v3/videos?part=contentDetails&id=${videoId}&key=${apiKey}`
+        );
+        const durationISO = response.data.items[0]?.contentDetails.duration;
+        duration = durationISO ? parseISO8601Duration(durationISO) : undefined;
+      } catch (error) {
+        console.warn("Could not fetch YouTube duration:", error.message);
+      }
+      if (duration > maxDuration) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Video exceeds 10 minutes. Please reduce the duration to 10 minutes or less. If the topic is incomplete, split it into multiple ≤10-minute parts (e.g., 'Topic 1 - Part 1', 'Topic 1 - Part 2') and upload separately.",
+        });
+      }
+    } else if (req.files && Object.keys(req.files).length > 0) {
+      const files = [req.files?.file0?.[0], req.files?.file1?.[0], req.files?.file2?.[0]].filter(Boolean);
+      if (files.length > 0) { // Only update if new files are provided
+        const uploadResults = await Promise.all(files.map((file) => uploadToCloudinary(file, "videos")));
+        for (const result of uploadResults) {
+          if (result.duration > maxDuration) {
+            await Promise.all(uploadResults.map((r) => deleteFromCloudinary(r.public_id, "video")));
+            return res.status(400).json({
+              success: false,
+              message: "One or more videos exceed 10 minutes. Please reduce each part to 10 minutes or less.",
+            });
+          }
+        }
+        if (video.source === "upload" && video.publicIds.length > 0) {
+          await Promise.all(video.publicIds.map((id) => deleteFromCloudinary(id, "video")));
+        }
+        content = uploadResults.map((r) => r.url).join(",");
+        publicIds = uploadResults.map((r) => r.public_id);
+        source = "upload";
+        duration = uploadResults.reduce((sum, r) => sum + r.duration, 0); // Sum durations
+      }
+    }
+
+    video.title = title || video.title;
+    video.content = content;
+    video.publicIds = publicIds;
+    video.source = source;
+    video.duration = duration;
+    video.description = description || video.description;
+    video.tags = tags ? tags.split(",").map((tag) => tag.trim()) : video.tags;
+    video.status = status || video.status;
+    video.updatedAt = Date.now();
+
+    await video.save();
+    const updatedVideo = await Video.findById(video._id).populate("author", "name role");
+    return res.status(200).json({ success: true, message: "Video updated successfully", data: updatedVideo });
+  } catch (error) {
+    console.error("Error in updateVideo:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const deleteVideo = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "training_team") {
+      return res.status(403).json({ success: false, message: "Access denied: Training Team role required" });
+    }
+    const video = await Video.findById(req.params.id);
+    if (!video) {
+      return res.status(404).json({ success: false, message: "Video not found" });
+    }
+    if (video.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "You can only delete your own videos" });
+    }
+
+    if (video.source === "upload") {
+      if (video.publicIds && video.publicIds.length > 0) {
+        await Promise.all(video.publicIds.map((publicId) => deleteFromCloudinary(publicId, "video")));
+      } else {
+        const urls = video.content.split(",");
+        const publicIds = urls.map((url) => {
+          const urlParts = url.split("/");
+          return urlParts.slice(urlParts.indexOf("place-pro")).join("/").replace(/\.[^/.]+$/, "");
+        });
+        await Promise.all(publicIds.map((publicId) => deleteFromCloudinary(publicId, "video")));
+      }
+    }
+
+    await Video.deleteOne({ _id: req.params.id });
+    return res.status(200).json({ success: true, message: "Video deleted successfully" });
+  } catch (error) {
+    console.error("Error in deleteVideo:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
 };

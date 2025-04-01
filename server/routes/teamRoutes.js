@@ -1,7 +1,7 @@
 import express from 'express'
 import userAuth from '../middleware/userAuth.js'
-import { createMaterial, createTeamBlog, deleteMaterial, deleteTeamBlog, getMaterials, getTeamBlogs, getTeamProfile, updateMaterial, updateTeamBlog } from '../controllers/teamController.js'
-import { uploadProfileImage, uploadStudyMaterial } from '../middleware/multer.js';
+import { createMaterial, createTeamBlog, deleteMaterial, deleteTeamBlog, deleteVideo, getMaterials, getTeamBlogs, getTeamProfile, getVideos, updateMaterial, updateTeamBlog, updateVideo, uploadVideos } from '../controllers/teamController.js'
+import { uploadProfileImage, uploadStudyMaterial, uploadVideo } from '../middleware/multer.js';
 
 const teamRouter = express.Router();
 
@@ -20,4 +20,16 @@ teamRouter.put("/study-materials/:id", userAuth, uploadStudyMaterial.fields([
   { name: "thumbnail", maxCount: 1 }
 ]), updateMaterial);
 teamRouter.delete("/study-materials/:id", userAuth, deleteMaterial);
+teamRouter.post("/videos", userAuth, uploadVideo.fields([
+  { name: "file0", maxCount: 1 },
+  { name: "file1", maxCount: 1 },
+  { name: "file2", maxCount: 1 },
+]), uploadVideos);
+teamRouter.put("/videos/:id", userAuth, uploadVideo.fields([
+  { name: "file0", maxCount: 1 },
+  { name: "file1", maxCount: 1 },
+  { name: "file2", maxCount: 1 },
+]), updateVideo);
+teamRouter.get("/videos", userAuth, getVideos);
+teamRouter.delete("/videos/:id", userAuth, deleteVideo);
 export default teamRouter;

@@ -33,6 +33,20 @@ const studyMaterialFilter = (req, file, cb) => {
   }
 };
 
+const videoFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "video/mp4",
+    "video/mpeg",
+    "video/quicktime", // .mov
+    "video/x-msvideo", // .avi
+  ];
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only video files (MP4, MPEG, MOV, AVI) are allowed!"), false);
+  }
+};
+
 export const uploadProfileImage = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -49,4 +63,10 @@ export const uploadStudyMaterial = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: studyMaterialFilter,
+});
+
+export const uploadVideo = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, 
+  fileFilter: videoFilter,
 });

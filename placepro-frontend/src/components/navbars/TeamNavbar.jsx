@@ -27,7 +27,7 @@ const TeamNavbar = () => {
           label: "STUDY MATERIALS",
           dropdown: [
             { path: "/team/resources", label: "Materials" },
-            { path: "/study-materials/videos", label: "Videos" },
+            { path: "/team/videos", label: "Videos" },
             { path: "/study-materials/qa", label: "Questions & Answers" },
           ],
         },

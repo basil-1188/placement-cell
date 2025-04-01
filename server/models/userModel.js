@@ -298,4 +298,28 @@ studyMaterialSchema.pre("save", function(next) {
 
 const StudyMaterial = mongoose.models.StudyMaterial || mongoose.model("StudyMaterial", studyMaterialSchema);
 
-export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial };
+const videoSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  type: { type: String, enum: ["video"], required: true },
+  content: { type: String, required: true }, 
+  publicIds: { type: [String], default: [] }, 
+  source: { type: String, enum: ["youtube", "upload"], required: true },
+  author: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
+  description: { type: String },
+  tags: [{ type: String }],
+  status: { type: String, enum: ["draft", "published"], default: "draft" },
+  duration: { type: Number },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+});
+
+videoSchema.pre("save", function (next) {
+  if (this.isModified()) {
+    this.updatedAt = Date.now();
+  }
+  next();
+});
+
+const Video = mongoose.models.Video || mongoose.model("Video", videoSchema);
+
+export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial,Video };
