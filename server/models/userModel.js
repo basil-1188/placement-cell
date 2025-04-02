@@ -238,7 +238,6 @@ const jobSchema = new mongoose.Schema(
 
 const jobModel = mongoose.models.Job || mongoose.model("Job", jobSchema);
 
-// models/index.js
 const jobApplicationSchema = new mongoose.Schema(
   {
     jobId: {

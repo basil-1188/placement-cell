@@ -762,3 +762,26 @@ export const getStudentQA = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };
+
+export const getLiveLink = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "student") {
+      return res.status(403).json({ success: false, message: "Access denied: Student role required" });
+    }
+
+    const liveClasses = await StudyMaterial
+      .find({ type: "live_class", status: "published" })
+      .select('title description schedule isLive thumbnail')
+      .lean();
+
+    if (!liveClasses.length) {
+      return res.status(200).json({ success: true, data: { liveClasses: [], message: "No live classes available" } });
+    }
+
+    res.status(200).json({ success: true, data: { liveClasses } });
+  } catch (error) {
+    console.error("Error in getLiveLink:", error.stack);
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};

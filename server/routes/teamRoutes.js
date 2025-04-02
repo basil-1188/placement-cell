@@ -1,6 +1,6 @@
 import express from 'express'
 import userAuth from '../middleware/userAuth.js'
-import { createMaterial, createTeamBlog, deleteMaterial, deleteQA, deleteTeamBlog, deleteVideo, getMaterials, getTeamBlogs, getTeamProfile, getTeamQA, getVideos, publishQA, updateMaterial, updateTeamBlog, updateVideo, uploadQA, uploadVideos } from '../controllers/teamController.js'
+import { createMaterial, createTeamBlog, deleteMaterial, deleteQA, deleteTeamBlog, deleteVideo, getFullStudentDetailsForTeam, getMaterials, getTeamBlogs, getTeamProfile, getTeamQA, getVideos, liveClassInfo, publishQA, studentsResultForTeam, updateMaterial, updateTeamBlog, updateVideo, uploadQA, uploadVideos } from '../controllers/teamController.js'
 import { uploadProfileImage, uploadStudyMaterial, uploadVideo } from '../middleware/multer.js';
 
 const teamRouter = express.Router();
@@ -37,4 +37,9 @@ teamRouter.put("/qa/:id", userAuth, uploadQA);
 teamRouter.get("/qa", userAuth, getTeamQA); 
 teamRouter.delete("/qa/:id", userAuth, deleteQA); 
 teamRouter.put("/qa/publish/:id", userAuth, publishQA);
+teamRouter.get('/get-user-details',userAuth,getFullStudentDetailsForTeam)
+teamRouter.get('/marks',userAuth,studentsResultForTeam);
+teamRouter.route('/live-class')
+  .get(userAuth, liveClassInfo)
+  .post(userAuth, liveClassInfo);
 export default teamRouter;

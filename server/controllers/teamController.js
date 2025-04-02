@@ -1,5 +1,6 @@
-import { userModel, Blog, StudyMaterial,Video } from "../models/userModel.js";
-import { uploadToCloudinary,deleteFromCloudinary } from "../utils/cloudinary.js";
+import { userModel,studentModel, Blog, StudyMaterial,Video,mockTestResultModel } from "../models/userModel.js";
+import { uploadToCloudinary,deleteFromCloudinary } from "../utils/Cloudinary.js";
+import transporter from "../config/nodemailer.js";
 
 export const getTeamProfile = async (req, res) => {
   try {
@@ -597,5 +598,188 @@ export const publishQA = async (req, res) => {
   } catch (error) {
     console.error("Error in publishQA:", error.stack);
     return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const getFullStudentDetailsForTeam = async (req, res) => {
+  try {
+    console.log("Fetching student details for user: ", req.user);
+    const user = await userModel.findById(req.user?._id); 
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Unauthorized: No user data" });
+    }
+    if (user.role !== 'training_team') {
+      return res.status(403).json({ success: false, message: "Access denied: Training team role required" });
+    }
+
+    const students = await userModel.find({ role: "student" }, "role _id name email profileImage"); 
+    console.log("Found students:", students.length);
+
+    const studentIds = students.map(student => student._id);
+    console.log("Student IDs:", studentIds);
+
+    const fullDetails = await studentModel.find( 
+      { studentId: { $in: studentIds } },
+      "studentId admnNo phoneNo dob address degree degreeCgpa plustwoPercent tenthPercent pgMarks"
+    );
+    console.log("Full student details:", fullDetails);
+
+    const responseData = students.map(student => {
+      const details = fullDetails.find(detail => 
+        detail.studentId && detail.studentId.toString() === student._id.toString()
+      );
+      return {
+        _id: student._id,
+        role: student.role,
+        name: student.name,
+        email: student.email,
+        profileImage: student.profileImage,
+        ...(details && {
+          admnNo: details.admnNo,
+          phoneNo: details.phoneNo,
+          dob: details.dob,
+          address: details.address,
+          degree: details.degree,
+          degreeCgpa: details.degreeCgpa,
+          plustwoPercent: details.plustwoPercent,
+          tenthPercent: details.tenthPercent,
+          pgMarks: details.pgMarks || [],
+        }),
+      };
+    });
+
+    console.log("Response data:", responseData);
+    res.status(200).json({ success: true, students: responseData });
+  } catch (error) {
+    console.error("Error fetching student details:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const studentsResultForTeam = async (req, res) => {
+  try {
+    const teamMember = await userModel.findById(req.user?._id);
+    if (!teamMember) {
+      return res.status(401).json({ success: false, message: "Unauthorized: No user data" });
+    }
+    if (teamMember.role !== "training_team") {
+      return res.status(403).json({ success: false, message: "Access denied: Training team role required" });
+    }
+
+    const testResults = await mockTestResultModel
+      .find(
+        {},
+        "studentId completedAt mockTestId mark totalQuestions percentage passed"
+      )
+      .populate("studentId", "name email")
+      .populate("mockTestId", "testName questions passMark")
+      .lean();
+
+    const allStudents = await userModel.find({ role: "student" }, "_id").lean();
+
+    const responseData = {
+      tests: testResults.map((result) => {
+        const totalQuestions = result.mockTestId.questions.length;
+        const fullMarks = totalQuestions;
+        const passMark = result.mockTestId.passMark;
+        return {
+          studentId: result.studentId._id.toString(),
+          studentName: result.studentId.name,
+          studentEmail: result.studentId.email,
+          mockTestId: result.mockTestId._id.toString(),
+          testName: result.mockTestId.testName,
+          marks: result.mark,
+          completedAt: result.completedAt,
+          totalQuestions,
+          fullMarks,
+          passMark,
+          percentage: result.percentage,
+          passed: result.passed,
+        };
+      }),
+      totalStudents: allStudents.length,
+    };
+
+    res.status(200).json({ success: true, data: responseData });
+  } catch (error) {
+    console.error("checkResults error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const liveClassInfo = async (req, res) => {
+  try {
+    const teamMember = await userModel.findById(req.user?._id);
+    if (!teamMember) {
+      return res.status(401).json({ success: false, message: "Unauthorized: No user data" });
+    }
+    if (teamMember.role !== "training_team") {
+      return res.status(403).json({ success: false, message: "Access denied: Training team role required" });
+    }
+
+    const liveClasses = await StudyMaterial
+      .find({ type: "live_class", status: "published" })
+      .select('title description schedule isLive createdAt thumbnail')
+      .lean();
+
+    const students = await userModel.find({ role: "student" }, 'email name').lean();
+
+    if (req.method === 'POST' && req.body.newClass) {
+      const { title, description, schedule, thumbnail } = req.body.newClass;
+      const newLiveClass = new StudyMaterial({
+        title,
+        type: "live_class",
+        content: "Live class link will be provided during the session",
+        author: teamMember._id,
+        isLive: false, // Kept as false initially
+        schedule: new Date(schedule),
+        description,
+        status: "published",
+        thumbnail: thumbnail || "Link to be provided later", 
+      });
+      await newLiveClass.save();
+
+      const mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        subject: `New Live Class Scheduled: ${title}`,
+        html: `
+          <div style="font-family: system-ui, sans-serif, Arial; font-size: 16px; background-color: #fff8f1">
+            <div style="max-width: 600px; margin: auto; padding: 16px">
+              <h2 style="font-size: 20px; margin: 16px 0">New Live Class Alert</h2>
+              <p style="margin: 0 0 16px">Dear Student,</p>
+              <p style="margin: 0 0 16px">
+                A new live class has been scheduled by the <strong>Nirmala College MCA Placement Team</strong>!
+              </p>
+              <p style="margin: 0 0 16px">
+                <strong>Title:</strong> ${title}<br />
+                <strong>Date:</strong> ${new Date(schedule).toLocaleDateString()}<br />
+                <strong>Time:</strong> ${new Date(schedule).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}<br />
+                <strong>Description:</strong> ${description || 'No description provided'}<br />
+                <strong>Join Here:</strong> <a href="${thumbnail || '#'}">${thumbnail || 'Link to be provided later'}</a>
+              </p>
+              <p style="margin: 0 0 16px">
+                Please make sure to attend this session to enhance your skills and stay updated with the training program.
+              </p>
+              <p style="margin: 0">
+                Best regards,<br />
+                <strong>Nirmala College MCA Placement Team</strong>
+              </p>
+            </div>
+          </div>
+        `,
+      };
+
+      const emailPromises = students.map((student) =>
+        transporter.sendMail({ ...mailOptions, to: student.email })
+      );
+      await Promise.all(emailPromises);
+
+      liveClasses.push(newLiveClass);
+    }
+
+    res.status(200).json({ success: true, data: { liveClasses, totalClasses: liveClasses.length } });
+  } catch (error) {
+    console.error("liveClassInfo error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };

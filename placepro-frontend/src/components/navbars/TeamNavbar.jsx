@@ -29,6 +29,15 @@ const TeamNavbar = () => {
             { path: "/team/resources", label: "Materials" },
             { path: "/team/videos", label: "Videos" },
             { path: "/team/Q-A", label: "Questions & Answers" },
+            { path: "/team/live-class", label: "Live Class" },
+          ],
+        },
+        {
+          path: "/students",
+          label: "STUDENTS",
+          dropdown: [
+            { path: "/team/student-lists", label: "Student List" },
+            { path: "/team/mocktest-results", label: "Mock Test Marks" },
           ],
         },
         { path: "/resume-review", label: "RESUME REVIEW" },

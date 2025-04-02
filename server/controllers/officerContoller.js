@@ -577,6 +577,7 @@ export const getBlogs = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };
+
 export const createBlog = async (req, res) => {
   try {
     const user = await userModel.findById(req.user?._id);
