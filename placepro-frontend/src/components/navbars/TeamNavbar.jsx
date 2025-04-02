@@ -40,7 +40,7 @@ const TeamNavbar = () => {
             { path: "/team/mocktest-results", label: "Mock Test Marks" },
           ],
         },
-        { path: "/resume-review", label: "RESUME REVIEW" },
+        { path: "/team/resume-review", label: "RESUME REVIEW" },
       ];
     }
     return [];

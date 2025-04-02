@@ -1,4 +1,4 @@
-import { userModel,studentModel, Blog, StudyMaterial,Video,mockTestResultModel } from "../models/userModel.js";
+import { userModel,studentModel, Blog, StudyMaterial,Video,mockTestResultModel,ResumeReview } from "../models/userModel.js";
 import { uploadToCloudinary,deleteFromCloudinary } from "../utils/Cloudinary.js";
 import transporter from "../config/nodemailer.js";
 
@@ -780,6 +780,90 @@ export const liveClassInfo = async (req, res) => {
     res.status(200).json({ success: true, data: { liveClasses, totalClasses: liveClasses.length } });
   } catch (error) {
     console.error("liveClassInfo error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const getStudentsForReview = async (req, res) => {
+  try {
+    const teamMember = await userModel.findById(req.user?._id);
+    if (!teamMember) {
+      return res.status(401).json({ success: false, message: "Unauthorized: No user data" });
+    }
+    if (teamMember.role !== "training_team") {
+      return res.status(403).json({ success: false, message: "Access denied: Training team role required" });
+    }
+
+    const students = await studentModel
+      .find()
+      .populate('studentId', 'name')
+      .select('_id resume studentId')
+      .lean();
+
+    const formattedStudents = await Promise.all(
+      students.map(async (student) => {
+        const feedbacks = await ResumeReview.find({ studentId: student._id })
+          .select('feedback reviewedAt')
+          .lean();
+        return {
+          _id: student._id,
+          name: student.studentId.name,
+          resume: student.resume,
+          feedbacks: feedbacks.map(f => ({
+            text: f.feedback,
+            timestamp: f.reviewedAt,
+          })),
+        };
+      })
+    );
+
+    console.log('Formatted students with feedback:', formattedStudents);
+    res.status(200).json({ success: true, data: formattedStudents });
+  } catch (error) {
+    console.error("getStudentsForReview error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const submitResumeFeedback = async (req, res) => {
+  try {
+    const teamMember = await userModel.findById(req.user?._id);
+    if (!teamMember) {
+      return res.status(401).json({ success: false, message: "Unauthorized: No user data" });
+    }
+    if (teamMember.role !== "training_team") {
+      return res.status(403).json({ success: false, message: "Access denied: Training team role required" });
+    }
+
+    const { studentId, feedback } = req.body;
+    if (!studentId || !feedback) {
+      return res.status(400).json({ success: false, message: "Student ID and feedback are required" });
+    }
+
+    const student = await studentModel.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+    if (!student.resume) {
+      return res.status(400).json({ success: false, message: "Student has no resume uploaded" });
+    }
+
+    const review = new ResumeReview({
+      studentId,
+      reviewType: 'manual',
+      feedback,
+      reviewedBy: req.user._id,
+      reviewedAt: new Date(),
+    });
+
+    await review.save();
+    res.status(201).json({
+      success: true,
+      message: "Feedback submitted successfully",
+      data: { reviewId: review._id, resumeLink: student.resume },
+    });
+  } catch (error) {
+    console.error("submitResumeFeedback error:", error.stack);
     res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };

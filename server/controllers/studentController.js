@@ -1,5 +1,6 @@
-import { userModel, studentModel,mockTestModel,mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial,Video } from "../models/userModel.js";
-import { uploadToCloudinary } from "../utils/cloudinary.js";
+import { userModel, studentModel,mockTestModel,mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial,Video,ResumeReview } from "../models/userModel.js";
+import { uploadToCloudinary } from "../utils/Cloudinary.js";
+import mongoose from 'mongoose'; 
 
 export const addStudentDetails = async (req, res) => {
   try {
@@ -783,5 +784,40 @@ export const getLiveLink = async (req, res) => {
   } catch (error) {
     console.error("Error in getLiveLink:", error.stack);
     return res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const manualResumeFeedback = async (req, res) => {
+  try {
+    console.log('Checking userModel availability:', !!userModel);
+    console.log('Checking ResumeReview availability:', !!ResumeReview);
+
+    const user = await userModel.findById(req.user?._id);
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Unauthorized: No user data" });
+    }
+    if (user.role !== "student") {
+      return res.status(403).json({ success: false, message: "Access denied: Student role required" });
+    }
+    const student = await studentModel.findOne({ studentId: req.user._id }).lean();
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student profile not found" });
+    }
+    const feedbacks = await ResumeReview.find({ studentId: student._id })
+      .select('feedback reviewedAt reviewedBy reviewType')
+      .populate('reviewedBy', 'name')
+      .lean();
+    res.status(200).json({
+      success: true,
+      data: feedbacks.map(f => ({
+        feedback: f.feedback,
+        reviewedAt: f.reviewedAt,
+        reviewedBy: f.reviewedBy ? f.reviewedBy.name : 'Pending',
+        reviewType: f.reviewType,
+      })),
+    });
+  } catch (error) {
+    console.error("manualResumeFeedback error:", error.stack);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };

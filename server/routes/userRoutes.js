@@ -1,9 +1,10 @@
 import express from 'express';
 import userAuth from '../middleware/userAuth.js';
 import { getUserData } from '../controllers/userController.js';
-import { uploadResume } from '../middleware/multer.js';
-import { addStudentDetails, applyForCampusDrive, attendMockTest, getAvailableMockTests, getBlogById, getLiveLink, getRanks, getStudentBlogs, getStudentDetails, getStudentMarks, getStudentQA, getUserMaterials, jobOpening, pastResults, showUserVideos, submitMockTest } from '../controllers/studentController.js';
+import { atsUpload, uploadResume } from '../middleware/multer.js';
+import { addStudentDetails, applyForCampusDrive, attendMockTest, getAvailableMockTests, getBlogById, getLiveLink, getRanks, getStudentBlogs, getStudentDetails, getStudentMarks, getStudentQA, getUserMaterials, jobOpening, manualResumeFeedback, pastResults, showUserVideos, submitMockTest } from '../controllers/studentController.js';
 import { getCampusDriveStudents } from '../controllers/officerContoller.js';
+import { checkResume } from '../controllers/atsController.js';
 
 const userRouter = express.Router();
 
@@ -25,5 +26,7 @@ userRouter.get('/user-materials', userAuth, getUserMaterials);
 userRouter.get('/user-videos',userAuth,showUserVideos);
 userRouter.get('/qa',userAuth,getStudentQA);
 userRouter.get('/live-link',userAuth,getLiveLink);
+userRouter.get('/resume/manual-feedbacks',userAuth,manualResumeFeedback);
+userRouter.post('/check-resume',userAuth, atsUpload.single("resume"), checkResume);
 
 export default userRouter;

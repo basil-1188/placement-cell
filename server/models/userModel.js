@@ -321,4 +321,15 @@ videoSchema.pre("save", function (next) {
 
 const Video = mongoose.models.Video || mongoose.model("Video", videoSchema);
 
-export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial,Video };
+const resumeReviewSchema = new mongoose.Schema({
+  _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true, index: true },
+  reviewType: { type: String, enum: ["AI", "manual"], required: true },
+  feedback: { type: String, required: true },
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: false },
+  reviewedAt: { type: Date, required: true, default: Date.now },
+});
+
+const ResumeReview = mongoose.models.ResumeReview || mongoose.model("ResumeReview", resumeReviewSchema);
+
+export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial,Video,ResumeReview };

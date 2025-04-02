@@ -38,7 +38,6 @@ const StudentNavbar = () => {
         { path: "/blogs", label: "BLOG" },
       ];
     }
-
     if (userData.role === "student") {
       return [
         { path: "/user/blogs", label: "BLOG" },
@@ -49,6 +48,14 @@ const StudentNavbar = () => {
             { path: "/user/mock-tests/take-test", label: "Take Test", condition: hasTest },
             { path: "/user/mock-tests/test-history", label: "Past Results" },
             { path: "/user/mock-tests/ranks", label: "Leaderboard Rankings" },
+          ],
+        },
+        {
+          path: "/resume",
+          label: "RESUME REVIEW",
+          dropdown: [
+            { path: "/user/resume/ats-checker", label: "Check ATS" },
+            { path: "/user/resume/manual-feedbacks", label: "Resume Feedbacks" },
           ],
         },
         { path: "/user/jobs", label: "JOBS" },

@@ -53,6 +53,9 @@ import TeamStudentLists from "./pages/trainingteam/TeamStudentLists";
 import MockTestMarks from "./pages/trainingteam/MockTestMarks";
 import LiveClass from "./pages/trainingteam/LiveClass";
 import StudentLiveClass from "./pages/user/StudentLiveClass";
+import ResumeReview from "./pages/trainingteam/ResumeReview";
+import StudentFeedback from "./pages/user/StudentFeedback";
+import ATSChecker from "./pages/user/ATSChecker";
 
 const ProtectedRoute = ({ children, allowedRoles, isPublic = false }) => {
   const { isLogin, userData, loading } = useContext(AppContext);
@@ -111,6 +114,8 @@ const App = () => {
               <Route path="videos" element={<UserVideos />} />
               <Route path="qa" element={<StudentQA />} />
               <Route path="live-classes" element={<StudentLiveClass />} />
+              <Route path="resume/manual-feedbacks" element={<StudentFeedback />} />
+              <Route path="resume/ats-checker" element={<ATSChecker />} />
               <Route path="mock-tests">
                 <Route path="take-test" element={<TakeTestList />} />
                 <Route path="take-test/:id" element={<TakeTest />} />
@@ -165,6 +170,7 @@ const App = () => {
               <Route path="student-lists" element={<TeamStudentLists />} />
               <Route path="mocktest-results" element={<MockTestMarks />} />
               <Route path="live-class" element={<LiveClass />} />
+              <Route path="resume-review" element={<ResumeReview/>} />
 
             </Route>
           </Routes>

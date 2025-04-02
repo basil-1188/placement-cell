@@ -47,6 +47,14 @@ const videoFilter = (req, file, cb) => {
   }
 };
 
+const atsFilter = (req, file, cb) => {
+  if (file.mimetype === "application/pdf") {
+    cb(null, true);
+  } else {
+    cb(new Error("Only PDF files are allowed for ATS analysis!"), false);
+  }
+};
+
 export const uploadProfileImage = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -69,4 +77,10 @@ export const uploadVideo = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 }, 
   fileFilter: videoFilter,
+});
+
+export const atsUpload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, 
+  fileFilter: atsFilter,
 });

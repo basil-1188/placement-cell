@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { AppContext } from "../../context/AppContext";
-import { FaChevronDown, FaChevronUp, FaVideo, FaSearch } from "react-icons/fa";
+import { FaChevronDown, FaChevronUp, FaSearch } from "react-icons/fa";
 import ReactPlayer from "react-player";
 
 const UserVideos = () => {
@@ -55,7 +55,11 @@ const UserVideos = () => {
   };
 
   const toggleExpand = (id) => {
-    setExpandedVideo(expandedVideo === id ? null : id);
+    // Explicitly set to the new ID or null, ensuring only one card is expanded
+    setExpandedVideo(current => {
+      console.log("Toggling - Current expanded:", current, "New ID:", id);
+      return current === id ? null : id;
+    });
   };
 
   if (loading) {
@@ -99,7 +103,7 @@ const UserVideos = () => {
             {filteredVideos.map((video) => (
               <div
                 key={video._id}
-                className="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300 hover:shadow-xl"
+                className="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-all duration-300 hover:shadow-xl flex flex-col"
               >
                 <div
                   className="flex justify-between items-center cursor-pointer"
@@ -109,7 +113,7 @@ const UserVideos = () => {
                   {expandedVideo === video._id ? <FaChevronUp /> : <FaChevronDown />}
                 </div>
                 {expandedVideo === video._id && (
-                  <div className="mt-4">
+                  <div className="mt-4 flex-grow">
                     <p className="text-gray-600 text-sm mb-2">{video.description || "No description"}</p>
                     <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                       {video.source === "youtube" ? (
