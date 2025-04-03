@@ -11,6 +11,7 @@ import {
   FaFileUpload,
   FaPlus,
   FaTrash,
+  FaImage,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +19,7 @@ import { AppContext } from "../../context/AppContext.jsx";
 import axios from "axios";
 
 const StudentDetailsForm = () => {
-  const { backendUrl, userData } = useContext(AppContext);
+  const { backendUrl, userData, setUserData } = useContext(AppContext);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -32,11 +33,13 @@ const StudentDetailsForm = () => {
     tenthPercent: "",
     githubProfile: "",
     resume: null,
+    profileImage: null,
     pgMarks: [],
   });
   const [newPgMark, setNewPgMark] = useState({ semester: "", cgpa: "" });
+  const [existingResume, setExistingResume] = useState(null);
+  const [existingProfileImage, setExistingProfileImage] = useState(null);
 
-  // Fetch existing student details on page load
   useEffect(() => {
     const fetchStudentDetails = async () => {
       try {
@@ -57,9 +60,12 @@ const StudentDetailsForm = () => {
             plustwoPercent: data.plustwoPercent || "",
             tenthPercent: data.tenthPercent || "",
             githubProfile: data.githubProfile || "",
-            resume: null, // Resume is not pre-filled for security
+            resume: null,
+            profileImage: null,
             pgMarks: data.pgMarks || [],
           });
+          setExistingResume(data.resume || null);
+          setExistingProfileImage(userData?.profileImage || null);
           toast.info("Details already entered. You can update them below.");
         }
       } catch (error) {
@@ -79,23 +85,51 @@ const StudentDetailsForm = () => {
   };
 
   const handleFileChange = (e) => {
+    const { name } = e.target;
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         toast.error("File size exceeds 5MB limit!");
         return;
       }
-      if (
-        ![
-          "application/pdf",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          "application/msword",
-        ].includes(file.type)
-      ) {
-        toast.error("Only PDF and DOC/DOCX files are allowed!");
+      if (name === "resume" && file.type !== "application/pdf") {
+        toast.error("Only PDF files are allowed for resumes!");
         return;
       }
-      setFormData({ ...formData, resume: file });
+      if (name === "profileImage" && !["image/jpeg", "image/png"].includes(file.type)) {
+        toast.error("Only JPEG or PNG files are allowed for profile images!");
+        return;
+      }
+      setFormData({ ...formData, [name]: file });
+      if (name === "resume") setExistingResume(null);
+      if (name === "profileImage") setExistingProfileImage(null);
+    }
+  };
+
+  const handleDeleteResume = async () => {
+    if (!existingResume) {
+      toast.info("No resume to delete.");
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to delete your resume?")) {
+      return;
+    }
+
+    try {
+      const response = await axios.delete(`${backendUrl}/api/user/delete-resume`, {
+        withCredentials: true,
+      });
+
+      if (response.data.success) {
+        setExistingResume(null);
+        toast.success("Resume deleted successfully!");
+      } else {
+        toast.error(response.data.message || "Failed to delete resume.");
+      }
+    } catch (error) {
+      console.error("Delete resume error:", error);
+      toast.error(error.response?.data?.message || "Failed to delete resume.");
     }
   };
 
@@ -109,8 +143,8 @@ const StudentDetailsForm = () => {
       toast.error("Please fill in both semester and CGPA!");
       return;
     }
-    if (isNaN(newPgMark.semester) || newPgMark.semester < 1 || newPgMark.semester > 8) {
-      toast.error("Semester must be a number between 1 and 8!");
+    if (isNaN(newPgMark.semester) || newPgMark.semester < 1 || newPgMark.semester > 4) {
+      toast.error("Semester must be a number between 1 and 4!");
       return;
     }
     if (isNaN(newPgMark.cgpa) || newPgMark.cgpa < 0 || newPgMark.cgpa > 10) {
@@ -135,38 +169,93 @@ const StudentDetailsForm = () => {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      const data = new FormData();
-      data.append("admnNo", formData.admnNo);
-      data.append("phoneNo", formData.phoneNo);
-      data.append("dob", formData.dob);
-      data.append("address", formData.address);
-      data.append("degree", formData.degree);
-      data.append("degreeCgpa", formData.degreeCgpa);
-      data.append("plustwoPercent", formData.plustwoPercent);
-      data.append("tenthPercent", formData.tenthPercent);
-      data.append("githubProfile", formData.githubProfile);
-      if (formData.resume) {
-        data.append("resume", formData.resume);
-      }
-      data.append("pgMarks", JSON.stringify(formData.pgMarks));
+    let hasChanges = false;
 
-      console.log("Submitting to:", `${backendUrl}/api/user/details`);
-      const response = await axios.post(`${backendUrl}/api/user/details`, data, {
-        withCredentials: true,
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+    // Submit student details and resume if there are changes
+    if (
+      formData.admnNo ||
+      formData.phoneNo ||
+      formData.dob ||
+      formData.address ||
+      formData.degree ||
+      formData.degreeCgpa ||
+      formData.plustwoPercent ||
+      formData.tenthPercent ||
+      formData.resume ||
+      formData.githubProfile ||
+      formData.pgMarks.length > 0
+    ) {
+      try {
+        const studentData = new FormData();
+        studentData.append("admnNo", formData.admnNo);
+        studentData.append("phoneNo", formData.phoneNo);
+        studentData.append("dob", formData.dob);
+        studentData.append("address", formData.address);
+        studentData.append("degree", formData.degree);
+        studentData.append("degreeCgpa", formData.degreeCgpa);
+        studentData.append("plustwoPercent", formData.plustwoPercent);
+        studentData.append("tenthPercent", formData.tenthPercent);
+        studentData.append("githubProfile", formData.githubProfile);
+        if (formData.resume) {
+          studentData.append("resume", formData.resume);
+        }
+        studentData.append("pgMarks", JSON.stringify(formData.pgMarks));
 
-      if (response.data.success) {
-        toast.success("Student details added/updated successfully!");
-        navigate("/user/profile");
+        console.log("Submitting student details to:", `${backendUrl}/api/user/details`);
+        const studentResponse = await axios.post(`${backendUrl}/api/user/details`, studentData, {
+          withCredentials: true,
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        if (studentResponse.data.success) {
+          toast.success("Student details added/updated successfully!");
+          hasChanges = true;
+          setExistingResume(studentResponse.data.data.resume || existingResume);
+          setFormData({ ...formData, resume: null }); // Clear resume input
+        } else {
+          toast.error(studentResponse.data.message || "Failed to update student details");
+        }
+      } catch (studentError) {
+        console.error("Student details submission error:", studentError);
+        toast.error(studentError.response?.data?.message || "Failed to update student details");
       }
-    } catch (err) {
-      console.error("Submission error:", err);
-      toast.error(err.response?.data?.message || "An error occurred. Please try again.");
-    } finally {
-      setLoading(false);
     }
+
+    // Submit profile image silently if provided
+    if (formData.profileImage) {
+      try {
+        const profileImageData = new FormData();
+        profileImageData.append("profileImage", formData.profileImage);
+
+        console.log("Submitting profile image to:", `${backendUrl}/api/user/update-profile-image`);
+        const profileResponse = await axios.post(`${backendUrl}/api/user/update-profile-image`, profileImageData, {
+          withCredentials: true,
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        if (profileResponse.data.success) {
+          // No toast here - keep it silent
+          setUserData({ ...userData, profileImage: profileResponse.data.profileImage });
+          setExistingProfileImage(profileResponse.data.profileImage);
+          setFormData({ ...formData, profileImage: null }); // Clear profile image input
+          hasChanges = true;
+        } else {
+          console.error("Profile image update failed:", profileResponse.data.message);
+          // No error toast - log it silently
+        }
+      } catch (profileError) {
+        console.error("Profile image upload error:", profileError);
+        // No error toast - log it silently
+      }
+    }
+
+    if (hasChanges) {
+      navigate("/user/profile");
+    } else {
+      toast.info("No changes submitted");
+    }
+
+    setLoading(false);
   };
 
   const dotSize = 12;
@@ -329,10 +418,45 @@ const StudentDetailsForm = () => {
               <input
                 type="file"
                 name="resume"
-                accept=".pdf,.doc,.docx"
+                accept=".pdf"
                 onChange={handleFileChange}
-                className="w-full p-4 pl-12 bg-gray-700 text-white border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full p-4 pl-12 bg-gray-700 text-white border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700"
               />
+              {existingResume && !formData.resume && (
+                <div className="flex items-center space-x-4 mt-2">
+                  <p className="text-gray-400 text-sm">
+                    Existing Resume: <span className="text-gray-200">{existingResume.split("/").pop()}</span>
+                  </p>
+                  <motion.button
+                    type="button"
+                    className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-all flex items-center space-x-2"
+                    onClick={handleDeleteResume}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FaTrash className="text-sm" />
+                    <span>Delete Resume</span>
+                  </motion.button>
+                </div>
+              )}
+            </div>
+
+            <div className="relative md:col-span-2">
+              <FaImage className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-400 text-lg" />
+              <input
+                type="file"
+                name="profileImage"
+                accept=".jpg,.jpeg,.png"
+                onChange={handleFileChange}
+                className="w-full p-4 pl-12 bg-gray-700 text-white border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700"
+              />
+              {existingProfileImage && !formData.profileImage && (
+                <div className="flex items-center space-x-4 mt-2">
+                  <p className="text-gray-400 text-sm">
+                    Existing Profile Image: <span className="text-gray-200">{existingProfileImage.split("/").pop()}</span>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -344,7 +468,7 @@ const StudentDetailsForm = () => {
                 <input
                   type="number"
                   name="semester"
-                  placeholder="Semester (1-8)"
+                  placeholder="Semester (1-4)"
                   value={newPgMark.semester}
                   onChange={handlePgMarkChange}
                   className="w-full p-4 pl-12 bg-gray-700 text-white border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"

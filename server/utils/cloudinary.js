@@ -48,8 +48,7 @@ export const uploadToCloudinary = (file, folderType, publicId = null) => {
       public_id: publicId || `${sanitizedName}_${Date.now()}`,
       overwrite: true,
       access_mode: "public",
-      attachment: false,
-      format: folderType === "study-materials" ? "pdf" : undefined,
+      format: (folderType === "resumes" || folderType === "study-materials") ? "pdf" : undefined, // Ensure PDF for resumes
     };
 
     console.log("Uploading file to Cloudinary:", {
@@ -71,7 +70,6 @@ export const uploadToCloudinary = (file, folderType, publicId = null) => {
           resolve({
             url: result.secure_url,
             public_id: result.public_id,
-            duration: result.duration,
           });
         }
       })
@@ -92,5 +90,41 @@ export const deleteFromCloudinary = async (publicId, resourceType = "video") => 
   } catch (error) {
     console.error("Error in deleteFromCloudinary:", error.message);
     throw new Error(`Cloudinary deletion error: ${error.message}`);
+  }
+};
+
+export const deleteResumeByUrl = async (resumeUrl) => {
+  try {
+    if (!resumeUrl) {
+      throw new Error("No resume URL provided");
+    }
+
+    console.log("Processing resume URL for deletion:", resumeUrl);
+
+    const urlParts = resumeUrl.split("/");
+    const fileName = urlParts[urlParts.length - 1];
+    const folder = `${urlParts[urlParts.length - 3]}/${urlParts[urlParts.length - 2]}`;
+    const publicId = `${folder}/${fileName.split(".")[0]}`;
+    console.log("Extracted publicId from URL:", publicId);
+
+    const result = await cloudinary.uploader.destroy(publicId, { resource_type: "raw" });
+    if (result.result === "ok") {
+      console.log(`Successfully deleted resume from Cloudinary: ${publicId}`);
+      return { success: true };
+    } else if (result.result === "not found") {
+      console.log("Resume not found in Cloudinary, proceeding to clear database entry");
+      return { success: false, notFound: true };
+    } else {
+      console.error(`Cloudinary deletion failed: ${result.result}`);
+      throw new Error(`Failed to delete resume from Cloudinary: ${result.result}`);
+    }
+  } catch (error) {
+    console.error("Error in deleteResumeByUrl:", error);
+    const errorMessage = error.message || error.error?.message || String(error);
+    if (errorMessage.includes("not found") || (error.http_code === 404)) {
+      console.log("Resume not found in Cloudinary, proceeding to clear database entry");
+      return { success: false, notFound: true };
+    }
+    throw new Error(`Failed to delete resume: ${errorMessage}`);
   }
 };

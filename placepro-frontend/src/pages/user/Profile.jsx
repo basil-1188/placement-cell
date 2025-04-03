@@ -86,7 +86,7 @@ const Profile = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `resume_${studentDetails.admnNo || "user"}.pdf`; 
+      link.download = `resume_${studentDetails.admnNo || "user"}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -114,7 +114,6 @@ const Profile = () => {
           <div className="text-center text-gray-600 text-lg animate-pulse">Loading profile...</div>
         ) : studentDetails ? (
           <div className="relative bg-gradient-to-br from-purple-900 via-blue-900 to-gray-900 bg-opacity-90 backdrop-blur-lg shadow-2xl rounded-xl p-8 border border-gray-200 overflow-hidden">
-
             <div className="absolute inset-0 z-0">
               <div className="absolute w-48 h-48 bg-purple-500 opacity-20 rounded-full blur-2xl top-4 left-4 animate-pulse"></div>
               <div className="absolute w-48 h-48 bg-blue-500 opacity-20 rounded-full blur-2xl bottom-4 right-4 animate-pulse delay-1000"></div>
@@ -122,7 +121,6 @@ const Profile = () => {
             </div>
 
             <div className="relative z-10">
-
               <motion.div
                 className="flex justify-center mb-8"
                 initial={{ scale: 0.9, opacity: 0 }}
@@ -206,7 +204,6 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/* Postgraduate Marks (if any) */}
               {studentDetails.pgMarks && studentDetails.pgMarks.length > 0 && (
                 <div className="mt-8">
                   <h3 className="text-xl font-semibold text-gray-100 mb-4 border-b-2 border-purple-400 pb-2">
@@ -223,17 +220,18 @@ const Profile = () => {
                 </div>
               )}
 
-              {/* Download Resume Button at the Bottom */}
               <div className="mt-10 flex justify-center">
-                <motion.button
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center space-x-2 shadow-md"
-                  onClick={handleDownloadResume}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <FaDownload className="text-lg" />
-                  <span>Download Resume</span>
-                </motion.button>
+                {studentDetails.resume && (
+                  <motion.button
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center space-x-2 shadow-md"
+                    onClick={handleDownloadResume}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FaDownload className="text-lg" />
+                    <span>Download Resume</span>
+                  </motion.button>
+                )}
               </div>
             </div>
           </div>

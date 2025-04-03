@@ -1,8 +1,8 @@
 import express from 'express';
 import userAuth from '../middleware/userAuth.js';
 import { getUserData } from '../controllers/userController.js';
-import { atsUpload, uploadResume } from '../middleware/multer.js';
-import { addStudentDetails, applyForCampusDrive, attendMockTest, getAvailableMockTests, getBlogById, getLiveLink, getRanks, getStudentBlogs, getStudentDetails, getStudentMarks, getStudentQA, getUserMaterials, jobOpening, manualResumeFeedback, pastResults, showUserVideos, submitMockTest } from '../controllers/studentController.js';
+import { atsUpload, uploadProfileImage, uploadResume } from '../middleware/multer.js';
+import { addStudentDetails, applyForCampusDrive, attendMockTest, deleteStudentResume, getAvailableMockTests, getBlogById, getLiveLink, getRanks, getStudentBlogs, getStudentDetails, getStudentMarks, getStudentQA, getUserMaterials, jobOpening, manualResumeFeedback, pastResults, showUserVideos, submitMockTest, updateProfileImage } from '../controllers/studentController.js';
 import { getCampusDriveStudents } from '../controllers/officerContoller.js';
 import { checkResume } from '../controllers/atsController.js';
 
@@ -11,6 +11,7 @@ const userRouter = express.Router();
 userRouter.get('/data',userAuth, getUserData)
 userRouter.post('/details',userAuth, uploadResume.single("resume"), addStudentDetails)
 userRouter.get('/details',userAuth,getStudentDetails)
+userRouter.delete('/delete-resume', userAuth, deleteStudentResume);
 userRouter.get('/attend-test/:id', userAuth, attendMockTest);
 userRouter.post('/submit-test/:id', userAuth, submitMockTest);
 userRouter.get('/available-tests', userAuth, getAvailableMockTests);
@@ -28,5 +29,6 @@ userRouter.get('/qa',userAuth,getStudentQA);
 userRouter.get('/live-link',userAuth,getLiveLink);
 userRouter.get('/resume/manual-feedbacks',userAuth,manualResumeFeedback);
 userRouter.post('/check-resume',userAuth, atsUpload.single("resume"), checkResume);
+userRouter.post("/update-profile-image", userAuth, uploadProfileImage.single("profileImage"), updateProfileImage);
 
 export default userRouter;

@@ -1,6 +1,5 @@
 import { userModel, studentModel,mockTestModel,mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial,Video,ResumeReview } from "../models/userModel.js";
-import { uploadToCloudinary } from "../utils/Cloudinary.js";
-import mongoose from 'mongoose'; 
+import { uploadToCloudinary,deleteResumeByUrl,deleteFromCloudinary } from "../utils/Cloudinary.js";
 
 export const addStudentDetails = async (req, res) => {
   try {
@@ -73,8 +72,8 @@ export const addStudentDetails = async (req, res) => {
         }
         const semester = parseInt(mark.semester);
         const cgpa = parseFloat(mark.cgpa);
-        if (isNaN(semester) || semester < 1 || semester > 8) {
-          return res.status(400).json({ success: false, message: "Semester must be a number between 1 and 8" });
+        if (isNaN(semester) || semester < 1 || semester > 4) {
+          return res.status(400).json({ success: false, message: "Semester must be a number between 1 and 4" });
         }
         if (isNaN(cgpa) || cgpa < 0 || cgpa > 10) {
           return res.status(400).json({ success: false, message: "Postgraduate CGPA must be a number between 0 and 10" });
@@ -82,20 +81,37 @@ export const addStudentDetails = async (req, res) => {
       }
     }
 
-    let resumeUrl = null;
-    if (req.file) {
-      try {
-        const publicId = `${admnNo}_${Date.now()}`;
-        resumeUrl = await uploadToCloudinary(req.file, "resumes", publicId);
-        console.log("addStudentDetails - Resume URL:", resumeUrl);
-      } catch (uploadError) {
-        console.error("addStudentDetails - Upload error:", uploadError.message);
-        return res.status(500).json({ success: false, message: `Failed to upload resume: ${uploadError.message}` });
-      }
-    }
-
     const studentId = req.user._id;
-    console.log("addStudentDetails - studentId:", studentId);
+    let resumeUrl = null;
+
+    const existingStudent = await studentModel.findOne({ studentId });
+
+    if (req.file) {
+      if (existingStudent?.resume) {
+        console.log("Old resume URL:", existingStudent.resume);
+        try {
+          await deleteResumeByUrl(existingStudent.resume);
+          console.log(`Deleted old resume from Cloudinary`);
+        } catch (deleteError) {
+          console.error("Failed to delete old resume (continuing anyway):", deleteError.message);
+        }
+      }
+      const allowedResumeTypes = ["application/pdf"];
+      if (!allowedResumeTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ success: false, message: "Only PDF files are allowed for resumes" });
+      }
+      const publicId = `${admnNo}_${Date.now()}`;
+      console.log("Uploading new resume with publicId:", publicId);
+      const uploadResult = await uploadToCloudinary(req.file, "resumes", publicId);
+      resumeUrl = uploadResult.url;
+      console.log("addStudentDetails - New Resume URL:", resumeUrl);
+      if (!resumeUrl.endsWith(".pdf")) {
+        console.error("Uploaded resume is not a PDF:", resumeUrl);
+        throw new Error("Uploaded resume is not stored as a PDF");
+      }
+    } else {
+      resumeUrl = existingStudent?.resume || null;
+    }
 
     const studentDetails = await studentModel.findOneAndUpdate(
       { studentId },
@@ -108,22 +124,19 @@ export const addStudentDetails = async (req, res) => {
         degreeCgpa: cgpa,
         plustwoPercent: plusTwo,
         tenthPercent: tenth,
-        resume: resumeUrl || undefined,
+        resume: resumeUrl,
         githubProfile,
         pgMarks: parsedPgMarks,
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
-    console.log("addStudentDetails - Updated studentDetails:", studentDetails);
 
+    console.log("addStudentDetails - Updated studentDetails:", studentDetails);
     res.status(201).json({ success: true, message: "Student details added/updated successfully", data: studentDetails });
   } catch (error) {
     console.error("Error adding student details:", error.message);
     if (error.message.includes("File too large")) {
       return res.status(400).json({ success: false, message: "File size exceeds 5MB limit" });
-    }
-    if (error.message.includes("Only PDF and DOC/DOCX files")) {
-      return res.status(400).json({ success: false, message: error.message });
     }
     res.status(500).json({ success: false, message: error.message });
   }
@@ -143,6 +156,79 @@ export const getStudentDetails = async (req, res) => {
   } catch (error) {
     console.error("Error fetching student details:", error.message);
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteStudentResume = async (req, res) => {
+  try {
+    const studentId = req.user._id;
+    const student = await studentModel.findOne({ studentId });
+    if (!student || !student.resume) {
+      return res.status(404).json({ success: false, message: "No resume found to delete" });
+    }
+
+    console.log("Resume URL from database:", student.resume);
+
+    const deleteResult = await deleteResumeByUrl(student.resume);
+
+    if (deleteResult.success || deleteResult.notFound) {
+      student.resume = null;
+      await student.save();
+      console.log("Resume cleared from database");
+      res.status(200).json({ success: true, message: "Resume deleted successfully" });
+    } else {
+      throw new Error("Unexpected deletion result");
+    }
+  } catch (error) {
+    console.error("Error deleting resume:", error.message);
+    res.status(500).json({ success: false, message: `Failed to delete resume: ${error.message}` });
+  }
+};
+
+export const updateProfileImage = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ success: false, message: "Unauthorized: User not authenticated" });
+    }
+
+    console.log("updateProfileImage - req.user:", req.user); // Log to verify email
+    const userId = req.user._id;
+    const existingUser = await userModel.findById(userId);
+
+    let profileImageUrl = null;
+
+    if (req.file) {
+      if (existingUser?.profileImage) {
+        console.log("Old profile image URL:", existingUser.profileImage);
+        try {
+          const urlParts = existingUser.profileImage.split("/");
+          const fileName = urlParts[urlParts.length - 1];
+          const publicId = `${urlParts[urlParts.length - 3]}/${urlParts[urlParts.length - 2]}/${fileName.split(".")[0]}`;
+          await deleteFromCloudinary(publicId, "image");
+          console.log(`Deleted old profile image from Cloudinary: ${publicId}`);
+        } catch (deleteError) {
+          console.error("Failed to delete old profile image (continuing anyway):", deleteError.message);
+        }
+      }
+
+      const publicId = `${req.user.email || "user_" + userId}_${Date.now()}`; // Fallback if email is missing
+      console.log("Uploading new profile image with publicId:", publicId);
+      const uploadResult = await uploadToCloudinary(req.file, "profile", publicId);
+      profileImageUrl = uploadResult.url;
+      console.log("updateProfileImage - New Profile Image URL:", profileImageUrl);
+
+      await userModel.findByIdAndUpdate(userId, { profileImage: profileImageUrl });
+    } else {
+      return res.status(400).json({ success: false, message: "No profile image provided" });
+    }
+
+    res.status(200).json({ success: true, message: "Profile image updated successfully", profileImage: profileImageUrl });
+  } catch (error) {
+    console.error("Error updating profile image:", error.message);
+    if (error.message.includes("Only image files")) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    res.status(500).json({ success: false, message: `Failed to update profile image: ${error.message}` });
   }
 };
 
