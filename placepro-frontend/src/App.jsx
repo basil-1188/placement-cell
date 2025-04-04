@@ -56,6 +56,16 @@ import StudentLiveClass from "./pages/user/StudentLiveClass";
 import ResumeReview from "./pages/trainingteam/ResumeReview";
 import StudentFeedback from "./pages/user/StudentFeedback";
 import ATSChecker from "./pages/user/ATSChecker";
+import OfficerTrainingTeam from "./pages/admin/OfficerTrainingTeam";
+import MockTests from "./pages/admin/MockTests";
+import TrainingResources from "./pages/admin/TrainingResources";
+import JobManagement from "./pages/admin/JobManagement";
+import CampusDriveApplicants from "./pages/admin/CampusDriveApplicants";
+import BlogsManagement from "./pages/admin/BlogsManagement";
+import BlogView from "./pages/admin/BlogView";
+import Reports from "./pages/admin/Reports";
+import Notifications from "./pages/admin/Notifications";
+import AdminTools from "./pages/admin/AdminTools";
 
 const ProtectedRoute = ({ children, allowedRoles, isPublic = false }) => {
   const { isLogin, userData, loading } = useContext(AppContext);
@@ -134,6 +144,17 @@ const App = () => {
               <Route index element={<Dashboard />} />
               <Route path="manage-users/update-roles" element={<UpdateRoles />} />
               <Route path="manage-users/all-studentdetails" element={<AllStudents />} />
+              <Route path="manage-users/officer-team" element={<OfficerTrainingTeam />} />
+              <Route path="mock-tests" element={<MockTests />} />
+              <Route path="training-resources" element={<TrainingResources />} />
+              <Route path="job-management" element={<JobManagement />} />
+              <Route path="/admin/campus-drive-applicants/:jobId" element={<CampusDriveApplicants />} />
+              <Route path="blogs" element={<BlogsManagement />}  />
+              <Route path="/admin/blog/:blogId" element={<BlogView />} />
+              <Route path="reports" element={<Reports />}  />
+              <Route path="notifications" element={<Notifications />}  />
+              <Route path="admin-tools" element={<AdminTools />}  />
+
             </Route>
             <Route
               path="/officer"

@@ -254,6 +254,7 @@ const jobApplicationSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    status: { type: String },
   },
   { timestamps: true }
 );

@@ -4,6 +4,7 @@ import { AppContext } from "../../context/AppContext";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
+import { FaMoon, FaSun } from "react-icons/fa";
 import AdminSidebar from "../../components/admin/AdminSidebar";
 
 const UpdateRoles = () => {
@@ -13,6 +14,7 @@ const UpdateRoles = () => {
   const [loading, setLoading] = useState(true);
   const [newRole, setNewRole] = useState("");
   const [isMinimized, setIsMinimized] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const navigate = useNavigate();
   const { userId } = useParams();
 
@@ -93,31 +95,41 @@ const UpdateRoles = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-20 text-gray-600">Loading...</div>;
+    return (
+      <div className={`text-center py-20 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>Loading...</div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className={`min-h-screen flex ${darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"}`}>
       <AdminSidebar isMinimized={isMinimized} setIsMinimized={setIsMinimized} />
       <motion.div
-        className={`flex-1 p-6 transition-all duration-300 ${
-          isMinimized ? "md:ml-16" : "md:ml-64"
-        }`}
+        className={`flex-1 p-6 transition-all duration-300 ${isMinimized ? "md:ml-16" : "md:ml-64"}`}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
-          <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">Update User Roles</h1>
+        <div className={`max-w-4xl mx-auto p-8 rounded-xl shadow-lg ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-center flex-1">Update User Roles</h1>
+            <motion.button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`p-2 rounded-full ${darkMode ? "bg-gray-700 text-yellow-400 hover:bg-gray-600" : "bg-gray-200 text-gray-600 hover:bg-gray-300"}`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {darkMode ? <FaSun size={20} /> : <FaMoon size={20} />}
+            </motion.button>
+          </div>
 
           {!selectedUser ? (
             <div>
-              <h2 className="text-xl font-semibold text-gray-700 mb-4 text-center">Select a User</h2>
+              <h2 className="text-xl font-semibold mb-4 text-center">Select a User</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {users.map((user) => (
                   <motion.div
                     key={user._id}
-                    className="bg-gray-100 p-4 rounded-md hover:bg-gray-200 cursor-pointer transition-colors"
+                    className={`p-4 rounded-md hover:bg-gray-700 cursor-pointer transition-colors ${darkMode ? "bg-gray-700" : "bg-gray-100 hover:bg-gray-200"}`}
                     onClick={() => handleUserSelect(user)}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -128,9 +140,9 @@ const UpdateRoles = () => {
                       alt={user.name}
                       className="w-12 h-12 rounded-full object-cover mx-auto mb-2"
                     />
-                    <p className="text-gray-800 font-medium text-center">{user.name}</p>
-                    <p className="text-gray-600 text-sm text-center">{user.email}</p>
-                    <p className="text-gray-500 text-sm text-center">Role: {user.role}</p>
+                    <p className={`font-medium text-center ${darkMode ? "text-white" : "text-gray-800"}`}>{user.name}</p>
+                    <p className={`text-sm text-center ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{user.email}</p>
+                    <p className={`text-sm text-center ${darkMode ? "text-gray-500" : "text-gray-500"}`}>Role: {user.role}</p>
                   </motion.div>
                 ))}
               </div>
@@ -140,16 +152,16 @@ const UpdateRoles = () => {
               <img
                 src={selectedUser.profileImage || "https://via.placeholder.com/100"}
                 alt={selectedUser.name}
-                className="w-24 h-24 rounded-full object-cover mb-4 border-2 border-gray-200"
+                className={`w-24 h-24 rounded-full object-cover mb-4 border-2 ${darkMode ? "border-gray-600" : "border-gray-200"}`}
               />
-              <h2 className="text-xl font-semibold text-gray-700">{selectedUser.name}</h2>
-              <p className="text-gray-600">{selectedUser.email}</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <h2 className="text-xl font-semibold">{selectedUser.name}</h2>
+              <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>{selectedUser.email}</p>
+              <p className={`text-sm mt-1 ${darkMode ? "text-gray-500" : "text-gray-500"}`}>
                 Current Role: <span className="font-medium">{selectedUser.role}</span>
               </p>
 
               <div className="w-full mt-6">
-                <label htmlFor="role" className="block text-gray-700 font-medium mb-2">
+                <label htmlFor="role" className="block font-medium mb-2">
                   Select New Role
                 </label>
                 <select
@@ -159,7 +171,7 @@ const UpdateRoles = () => {
                     console.log("Selected role:", e.target.value);
                     setNewRole(e.target.value);
                   }}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "border-gray-300 text-gray-700"}`}
                 >
                   <option value="" disabled>
                     Select a new role
@@ -192,7 +204,7 @@ const UpdateRoles = () => {
 
           <motion.button
             onClick={() => navigate("/admin")}
-            className="w-full mt-6 bg-gray-700 text-white py-2 px-4 rounded-md hover:bg-gray-800 transition-colors"
+            className={`w-full mt-6 py-2 px-4 rounded-md text-white transition-colors ${darkMode ? "bg-gray-700 hover:bg-gray-800" : "bg-gray-700 hover:bg-gray-800"}`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >

@@ -1,6 +1,6 @@
 import { useState, useContext } from "react";
 import { motion } from "framer-motion";
-import { FaBars, FaTimes, FaUsers, FaUserGraduate, FaUserTie, FaChalkboardTeacher, FaUser, FaChartLine, FaTools } from "react-icons/fa";
+import { FaBars, FaTimes, FaUsers, FaUserGraduate, FaUserTie, FaChalkboardTeacher, FaUser, FaChartLine, FaTools, FaFileAlt, FaVideo, FaBriefcase, FaRobot, FaBlog, FaBell, FaBuilding } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import { AppContext } from "../../context/AppContext";
 
@@ -31,12 +31,17 @@ const AdminSidebar = ({ isMinimized, setIsMinimized }) => {
       icon: FaUsers,
       dropdown: [
         { path: "/admin/manage-users/all-studentdetails", label: "Students" },
-        { path: "/admin/manage-users/officers", label: "Officers & Team" },
+        { path: "/admin/manage-users/officer-team", label: "Officers & Team" },
         { path: "/admin/manage-users/update-roles", label: "Update Role" },
       ],
     },
+    { path: "/admin/mock-tests", label: "Mock Tests", icon: FaFileAlt },
+    { path: "/admin/training-resources", label: "Training Resources", icon: FaVideo },
+    { path: "/admin/job-management", label: "Job Management", icon: FaBriefcase },
+    { path: "/admin/ai-interviews", label: "AI Interviews", icon: FaRobot },
+    { path: "/admin/blogs", label: "Blogs & Tips", icon: FaBlog },
     { path: "/admin/reports", label: "Reports", icon: FaChartLine },
-    { path: "/admin/ai-interviews", label: "AI Interviews", icon: FaUserTie },
+    { path: "/admin/notifications", label: "Notifications", icon: FaBell },
     { path: "/admin/admin-tools", label: "Admin Tools", icon: FaTools },
   ];
 
@@ -52,7 +57,7 @@ const AdminSidebar = ({ isMinimized, setIsMinimized }) => {
       <div className="p-4 flex items-center justify-between">
         {!isMinimized && (
           <Link to="/admin" className="flex items-center space-x-3">
-            <span className="text-xl font-bold tracking-tight">Admin Panel</span>
+            <span className="text-xl font-bold tracking-tight">Place-Pro Admin</span>
           </Link>
         )}
         <button
