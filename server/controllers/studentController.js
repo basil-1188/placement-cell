@@ -1,4 +1,4 @@
-import { userModel, studentModel,mockTestModel,mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial,Video,ResumeReview } from "../models/userModel.js";
+import { userModel, studentModel,mockTestModel,mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial,Video,ResumeReview,Interview, Feedback } from "../models/userModel.js";
 import { uploadToCloudinary,deleteResumeByUrl,deleteFromCloudinary } from "../utils/Cloudinary.js";
 
 export const addStudentDetails = async (req, res) => {
@@ -905,5 +905,214 @@ export const manualResumeFeedback = async (req, res) => {
   } catch (error) {
     console.error("manualResumeFeedback error:", error.stack);
     res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+export const getUserInterviews = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const query = { studentId: req.user._id };
+    if (status) query.status = status;
+
+    const interviews = await Interview.find(query)
+      .populate("createdBy", "name")
+      .select("scheduledAt status questions completedAt responses");
+
+    const interviewData = interviews.map((interview) => ({
+      id: interview._id,
+      scheduledAt: interview.scheduledAt,
+      status: interview.status,
+      createdBy: interview.createdBy?.name || "Unknown",
+      questionCount: interview.questions.length,
+      completedAt: interview.completedAt,
+      responses: interview.responses.map((r) => ({
+        questionIndex: r.questionIndex,
+        answer: r.answer,
+        timestamp: r.timestamp,
+      })),
+    }));
+
+    res.json({ success: true, data: interviewData });
+  } catch (error) {
+    console.error("Error fetching user interviews:", error.message);
+    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+  }
+};
+
+export const getUserInterviewById = async (req, res) => {
+  try {
+    const interview = await Interview.findOne({ _id: req.params.id, studentId: req.user._id })
+      .populate("createdBy", "name")
+      .select("scheduledAt status questions completedAt responses");
+
+    if (!interview) {
+      return res.status(404).json({ success: false, message: "Interview not found" });
+    }
+
+    const interviewData = {
+      id: interview._id,
+      scheduledAt: interview.scheduledAt,
+      status: interview.status,
+      createdBy: interview.createdBy?.name || "Unknown",
+      questionCount: interview.questions.length,
+      questions: interview.questions, // Include full question objects
+      completedAt: interview.completedAt,
+      responses: interview.responses.map((r) => ({
+        questionIndex: r.questionIndex,
+        answer: r.answer,
+        timestamp: r.timestamp,
+      })),
+    };
+
+    res.json({ success: true, data: interviewData });
+  } catch (error) {
+    console.error("Error fetching interview by ID:", error.message);
+    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+  }
+};
+
+export const submitQuery = async (req, res) => {
+  try {
+    const { comment } = req.body;
+    if (!comment) {
+      return res.status(400).json({ success: false, message: "Comment is required" });
+    }
+
+    const feedback = new Feedback({
+      submittedBy: req.user._id,
+      type: "query",
+      targetRole: "admin",
+      comment,
+      submittedAt: new Date(),
+    });
+
+    await feedback.save();
+
+    res.json({ success: true, message: "Query sent to admin successfully" });
+  } catch (error) {
+    console.error("Error submitting query:", error.message);
+    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+  }
+};
+
+export const submitInterviewResponse = async (req, res) => {
+  try {
+    const { responses, status } = req.body;
+    const interviewId = req.params.id;
+    const userId = req.user._id;
+
+    // Validate request
+    if (!Array.isArray(responses)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid responses format"
+      });
+    }
+
+    // Update interview
+    const interview = await Interview.findByIdAndUpdate(
+      interviewId,
+      {
+        $set: {
+          responses,
+          status,
+          completedAt: new Date()
+        }
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Interview submitted successfully",
+      data: interview
+    });
+
+  } catch (error) {
+    console.error("Error submitting interview:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+export const submitFeedback = async (req, res) => {
+  try {
+    const { type, entityId, typeModel, targetRole, targetUser, comment, rating } = req.body;
+
+    if (!type || !comment) {
+      return res.status(400).json({ success: false, message: "Type and comment are required" });
+    }
+
+    if (!["interview", "mocktest", "job", "studymaterial", "query", "general"].includes(type)) {
+      return res.status(400).json({ success: false, message: "Invalid feedback type" });
+    }
+
+    if (type === "interview" && entityId) {
+      const interview = await Interview.findById(entityId);
+      if (!interview) {
+        return res.status(404).json({ success: false, message: "Interview not found" });
+      }
+    }
+
+    const feedback = new Feedback({
+      submittedBy: req.user._id,
+      type,
+      entityId: entityId || null,
+      typeModel: typeModel || null, // Ensure it accepts the provided value
+      targetRole: targetRole || null,
+      targetUser: targetUser || null,
+      comment,
+      rating: rating || null,
+      submittedAt: new Date(),
+    });
+
+    await feedback.save();
+
+    res.json({ success: true, message: "Feedback submitted successfully", data: feedback });
+  } catch (error) {
+    console.error("Error submitting feedback:", error.message);
+    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+  }
+};
+
+export const getInterviewFeedback = async (req, res) => {
+  try {
+    const student = await userModel.findById(req.user?._id);
+    if (!student || student.role !== "student") {
+      return res.status(403).json({ success: false, message: "Access denied. Student role required." });
+    }
+
+    const { id } = req.params;
+    if (!id || id === "undefined") {
+      return res.status(400).json({ success: false, message: "Invalid interview ID" });
+    }
+
+    const interview = await Interview.findById(id).populate("studentId", "name");
+    if (!interview) {
+      return res.status(404).json({ success: false, message: "Interview not found" });
+    }
+
+    if (interview.studentId._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "You can only view your own feedback" });
+    }
+
+    const feedbackData = {
+      overallScore: interview.performanceScore || 0,
+      overallComment: interview.performanceScore ? "Reviewed by admin" : "Awaiting admin feedback",
+      responses: interview.responses.map((resp) => ({
+        questionIndex: resp.questionIndex,
+        question: interview.questions[resp.questionIndex]?.text || "Question not found",
+        answer: resp.answer || "No answer provided",
+        feedback: resp.feedback || "No feedback yet",
+      })),
+    };
+
+    console.log("Feedback response for ID:", id, feedbackData);
+    res.json({ success: true, data: feedbackData });
+  } catch (error) {
+    console.error("Error fetching interview feedback:", error.message);
+    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
   }
 };

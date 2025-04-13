@@ -2,7 +2,7 @@ import express from 'express';
 import userAuth from '../middleware/userAuth.js';
 import { getUserData } from '../controllers/userController.js';
 import { atsUpload, uploadProfileImage, uploadResume } from '../middleware/multer.js';
-import { addStudentDetails, applyForCampusDrive, attendMockTest, deleteStudentResume, getAvailableMockTests, getBlogById, getLiveLink, getRanks, getStudentBlogs, getStudentDetails, getStudentMarks, getStudentQA, getUserMaterials, jobOpening, manualResumeFeedback, pastResults, showUserVideos, submitMockTest, updateProfileImage } from '../controllers/studentController.js';
+import { addStudentDetails, applyForCampusDrive, attendMockTest, deleteStudentResume, getAvailableMockTests, getBlogById, getInterviewFeedback, getLiveLink, getRanks, getStudentBlogs, getStudentDetails, getStudentMarks, getStudentQA, getUserInterviewById, getUserInterviews, getUserMaterials, jobOpening, manualResumeFeedback, pastResults, showUserVideos, submitFeedback, submitInterviewResponse, submitMockTest, submitQuery, updateProfileImage } from '../controllers/studentController.js';
 import { getCampusDriveStudents } from '../controllers/officerContoller.js';
 import { checkResume } from '../controllers/atsController.js';
 
@@ -30,5 +30,11 @@ userRouter.get('/live-link',userAuth,getLiveLink);
 userRouter.get('/resume/manual-feedbacks',userAuth,manualResumeFeedback);
 userRouter.post('/check-resume',userAuth, atsUpload.single("resume"), checkResume);
 userRouter.post("/update-profile-image", userAuth, uploadProfileImage.single("profileImage"), updateProfileImage);
+userRouter.get("/ai-interviews", userAuth, getUserInterviews);
+userRouter.get("/ai-interview/:id", userAuth, getUserInterviewById); 
+userRouter.post("/ai-interview-query", userAuth, submitQuery);
+userRouter.post("/ai-interview/:id/response", userAuth, submitInterviewResponse);
+userRouter.post("/submit-feedback", userAuth, submitFeedback);
+userRouter.get("/ai-interview/:id/feedback", userAuth, getInterviewFeedback);
 
 export default userRouter;

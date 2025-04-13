@@ -69,7 +69,15 @@ const StudentNavbar = () => {
             { path: "/user/qa", label: "Questions & Answers" }
           ],
         },
-        { path: "/ai-interview", label: "AI INTERVIEW" },
+        {
+          path: "/ai-interview",
+          label: "AI INTERVIEW",
+          dropdown: [
+            { path: "/user/ai-interview/take-test", label: "Take Test" },
+            { path: "/user/ai-interview/history", label: "History" },
+            { path: "/user/ai-interview/query", label: "Query" },
+          ],
+        },
       ];
     }
     return [];

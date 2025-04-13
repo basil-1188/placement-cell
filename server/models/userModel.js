@@ -333,4 +333,43 @@ const resumeReviewSchema = new mongoose.Schema({
 
 const ResumeReview = mongoose.models.ResumeReview || mongoose.model("ResumeReview", resumeReviewSchema);
 
-export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial,Video,ResumeReview };
+const questionSchema = new mongoose.Schema({
+  text: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+});
+
+const answerSchema = new mongoose.Schema({
+  questionIndex: { type: Number, required: true },
+  answer: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+  feedback: { type: String, default: "" }, 
+});
+
+const interviewSchema = new mongoose.Schema({
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
+  questions: [questionSchema],
+  responses: [answerSchema],
+  scheduledAt: { type: Date, required: true },
+  completedAt: { type: Date },
+  status: { type: String, enum: ["pending", "in-progress", "completed"], default: "pending" },
+  performanceScore: { type: Number, min: 0, max: 100, default: null },
+});
+
+const Interview = mongoose.models.Interview || mongoose.model("Interview", interviewSchema);
+
+const feedbackSchema = new mongoose.Schema({
+  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
+  type: { type: String, enum: ["interview", "mocktest", "job", "studymaterial", "query", "general"], required: true },
+  entityId: { type: mongoose.Schema.Types.ObjectId, refPath: "typeModel", required: function() { return this.type !== "general" && this.type !== "query"; } },
+  typeModel: { type: String, enum: ["Interview", "MockTests", "Job", "StudyMaterial", null], required: function() { return this.type !== "general" && this.type !== "query"; } },
+  targetRole: { type: String, enum: ["admin", "placement_officer", "training_team", "student", "all"], default: "all" },
+  targetUser: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: false },
+  comment: { type: String, required: true },
+  rating: { type: Number, min: 1, max: 5, required: false },
+  submittedAt: { type: Date, default: Date.now }
+});
+
+const Feedback = mongoose.models.Feedback || mongoose.model("Feedback", feedbackSchema);
+
+export { userModel, studentModel, mockTestModel, mockTestResultModel,jobModel,jobApplicationModel,Blog,StudyMaterial,Video,ResumeReview,Interview, Feedback };

@@ -66,6 +66,14 @@ import BlogView from "./pages/admin/BlogView";
 import Reports from "./pages/admin/Reports";
 import Notifications from "./pages/admin/Notifications";
 import AdminTools from "./pages/admin/AdminTools";
+import ScheduleQuestions from "./pages/admin/ScheduleQuestions";
+import InterviewResults from "./pages/admin/InterviewResults";
+import InterviewFeedback from "./pages/admin/InterviewFeedback";
+import AIInterviewTakeTest from "./pages/user/AIInterviewTakeTest";
+import AIInterviewHistory from "./pages/user/AIInterviewHistory";
+import AIInterviewQuery from "./pages/user/AIInterviewQuery";
+import AIInterviewDetail from "./pages/user/AIInterviewDetail";
+import AIInterviewFeedback from "./pages/user/AIInterviewFeedback";
 
 const ProtectedRoute = ({ children, allowedRoles, isPublic = false }) => {
   const { isLogin, userData, loading } = useContext(AppContext);
@@ -126,6 +134,11 @@ const App = () => {
               <Route path="live-classes" element={<StudentLiveClass />} />
               <Route path="resume/manual-feedbacks" element={<StudentFeedback />} />
               <Route path="resume/ats-checker" element={<ATSChecker />} />
+              <Route path="ai-interview/take-test" element={<AIInterviewTakeTest />} />
+              <Route path="ai-interview/take-test/:id" element={<AIInterviewDetail />} />
+              <Route path="ai-interview/history" element={<AIInterviewHistory />} />
+              <Route path="ai-interview/feedback" element={<AIInterviewFeedback />} />
+              <Route path="ai-interview/query" element={<AIInterviewQuery />} />
               <Route path="mock-tests">
                 <Route path="take-test" element={<TakeTestList />} />
                 <Route path="take-test/:id" element={<TakeTest />} />
@@ -154,7 +167,9 @@ const App = () => {
               <Route path="reports" element={<Reports />}  />
               <Route path="notifications" element={<Notifications />}  />
               <Route path="admin-tools" element={<AdminTools />}  />
-
+              <Route path="ai-interviews/schedule" element={<ScheduleQuestions />} />
+              <Route path="ai-interviews/results" element={<InterviewResults />} />
+              <Route path="ai-interviews/feedback" element={<InterviewFeedback />} />
             </Route>
             <Route
               path="/officer"

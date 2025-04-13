@@ -1,4 +1,4 @@
-import { studentModel, userModel, mockTestModel, mockTestResultModel, StudyMaterial, Video, jobModel, jobApplicationModel,Blog } from "../models/userModel.js";
+import { studentModel, userModel, mockTestModel, mockTestResultModel, StudyMaterial, Video, jobModel, jobApplicationModel,Blog, Interview, Feedback } from "../models/userModel.js";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -561,6 +561,176 @@ export const getDashboardStats = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in getDashboardStats:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const scheduleInterviewQuestions = async (req, res) => {
+  try {
+    const admin = await userModel.findById(req.user?._id);
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied. Admin role required." });
+    }
+    const { studentId, questions, scheduledAt } = req.body;
+    if (!studentId || !questions || !Array.isArray(questions) || questions.length === 0 || !scheduledAt) {
+      return res.status(400).json({ success: false, message: "Student ID (or 'all'), questions array, and scheduledAt are required" });
+    }
+
+    let interviews = [];
+    if (studentId === "all") {
+      const students = await userModel.find({ role: "student" }).select("_id");
+      interviews = students.map((student) => ({
+        studentId: student._id,
+        createdBy: req.user._id,
+        questions: questions.map((text) => ({ text })),
+        scheduledAt: new Date(scheduledAt),
+      }));
+    } else {
+      const student = await userModel.findById(studentId);
+      if (!student || student.role !== "student") {
+        return res.status(404).json({ success: false, message: "Valid student ID required" });
+      }
+      interviews = [{
+        studentId,
+        createdBy: req.user._id,
+        questions: questions.map((text) => ({ text })),
+        scheduledAt: new Date(scheduledAt),
+      }];
+    }
+
+    const savedInterviews = await Interview.insertMany(interviews);
+    res.json({ success: true, message: "Interview(s) scheduled successfully", data: savedInterviews });
+  } catch (error) {
+    console.error("Error in scheduleInterviewQuestions:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const getAllTheStudents = async (req, res) => {
+  try {
+    const admin = await userModel.findById(req.user?._id);
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied. Admin role required." });
+    }
+    const students = await userModel.find({ role: "student" }).select("_id name");
+    res.json({ success: true, data: students });
+  } catch (error) {
+    console.error("Error fetching students:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const getInterviewResults = async (req, res) => {
+  try {
+    const admin = await userModel.findById(req.user?._id);
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied. Admin role required." });
+    }
+
+    const interviews = await Interview.find()
+      .populate("studentId", "name")
+      .select("studentId scheduledAt status completedAt responses questions performanceScore");
+
+    const interviewResults = interviews.map((interview) => ({
+      id: interview._id,
+      studentName: interview.studentId?.name || "Unknown",
+      type: "AI Interview",
+      title: `Interview with ${interview.studentId?.name || "Unknown"}`,
+      date: interview.completedAt || interview.scheduledAt,
+      status: interview.status,
+      score: interview.performanceScore, // Now included from DB
+      responses: interview.responses.map((r) => ({
+        questionIndex: r.questionIndex,
+        question: interview.questions[r.questionIndex]?.text || "Unknown question",
+        answer: r.answer,
+        feedback: r.feedback || "",
+      })),
+    }));
+
+    res.json({ success: true, data: interviewResults });
+  } catch (error) {
+    console.error("Error fetching interview results:", error.message);
+    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+  }
+};
+
+export const updateInterviewFeedback = async (req, res) => {
+  try {
+    const admin = await userModel.findById(req.user?._id);
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied. Admin role required." });
+    }
+
+    const { interviewId, responses, performanceScore } = req.body;
+
+    if (!interviewId || !Array.isArray(responses) || performanceScore === undefined) {
+      return res.status(400).json({ success: false, message: "interviewId, responses array, and performanceScore are required" });
+    }
+
+    const score = Number(performanceScore);
+    if (isNaN(score) || score < 0 || score > 100) {
+      return res.status(400).json({ success: false, message: "performanceScore must be a number between 0 and 100" });
+    }
+
+    const interview = await Interview.findById(interviewId);
+    if (!interview) {
+      return res.status(404).json({ success: false, message: "Interview not found" });
+    }
+
+    const updatedCount = responses.reduce((count, resp) => {
+      if (typeof resp.questionIndex !== "number" || (resp.feedback !== undefined && typeof resp.feedback !== "string")) {
+        throw new Error(`Invalid response format: questionIndex must be a number, feedback must be a string if provided`);
+      }
+
+      const response = interview.responses.find((r) => r.questionIndex === resp.questionIndex);
+      if (!response) {
+        throw new Error(`Invalid questionIndex: ${resp.questionIndex} not found in interview responses`);
+      }
+
+      response.feedback = resp.feedback !== undefined ? resp.feedback : response.feedback;
+      return count + 1;
+    }, 0);
+
+    if (updatedCount === 0 && responses.length > 0) {
+      return res.status(400).json({ success: false, message: "No valid responses matched to update" });
+    }
+
+    interview.performanceScore = score;
+
+    await interview.save();
+
+    res.json({ success: true, message: "Feedback and score updated successfully", data: interview });
+  } catch (error) {
+    console.error("Error updating interview feedback:", error.message, error.stack);
+    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+  }
+};
+
+export const getInterviewFeedback = async (req, res) => {
+  try {
+    const admin = await userModel.findById(req.user?._id);
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied. Admin role required." });
+    }
+    const feedbacks = await Feedback.find()
+      .populate("submittedBy", "name")
+      .populate("targetUser", "name")
+      .select("submittedBy type entityId targetRole targetUser comment rating submittedAt");
+
+    const feedbackData = feedbacks.map((feedback) => ({
+      submittedBy: feedback.submittedBy.name,
+      type: feedback.type,
+      entityId: feedback.entityId,
+      targetRole: feedback.targetRole,
+      targetUser: feedback.targetUser ? feedback.targetUser.name : null,
+      comment: feedback.comment,
+      rating: feedback.rating,
+      submittedAt: feedback.submittedAt,
+    }));
+
+    res.json({ success: true, data: feedbackData });
+  } catch (error) {
+    console.error("Error fetching feedback:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };

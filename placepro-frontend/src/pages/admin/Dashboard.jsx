@@ -1,15 +1,15 @@
 import { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
-import { FaUsers, FaUserGraduate, FaUserTie, FaChalkboardTeacher, FaMoon, FaSun, FaChartLine } from "react-icons/fa";
+import { FaUsers, FaUserGraduate, FaUserTie, FaChalkboardTeacher, FaMoon, FaSun, FaChartLine, FaUser, FaLock } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { AppContext } from "../../context/AppContext";
 import AdminSidebar from "../../components/admin/AdminSidebar";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { Line } from "react-chartjs-2";
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from "chart.js";
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from "chart.js";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 const Dashboard = () => {
   const { loading, userData, backendUrl } = useContext(AppContext);
@@ -18,6 +18,7 @@ const Dashboard = () => {
   const [adminData, setAdminData] = useState({ totalUsers: 0, totalStudents: 0, totalOfficers: 0, totalTrainingTeam: 0 });
   const [recentActivity, setRecentActivity] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     if (!userData || userData.role !== "admin") {
@@ -53,6 +54,11 @@ const Dashboard = () => {
 
     fetchDashboardData();
   }, [backendUrl, userData]);
+
+  const handleForgotPassword = () => {
+    toast.info("Please check your email for a password reset link.");
+    setProfileOpen(false);
+  };
 
   const chartData = {
     labels: ["Students", "Officers", "Training Team"],
@@ -101,22 +107,56 @@ const Dashboard = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Welcome, {userData?.name || "Admin"}</h1>
             <p className={`text-md ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-              Overview as of {new Date().toLocaleDateString()} | Total Users: {adminData.totalUsers}
+              Overview as of {new Date().toLocaleDateString()} | Total Users: {adminData.totalUsers - 1}
             </p>
           </div>
-          <motion.button
-            onClick={() => setDarkMode(!darkMode)}
-            className={`p-3 rounded-full ${darkMode ? "bg-gray-600 text-yellow-400 hover:bg-gray-500" : "bg-gray-200 text-gray-600 hover:bg-gray-300"}`}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            {darkMode ? <FaSun size={24} /> : <FaMoon size={24} />}
-          </motion.button>
+          <div className="flex items-center space-x-4">
+            <motion.button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`p-3 rounded-full ${darkMode ? "bg-gray-600 text-yellow-400 hover:bg-gray-500" : "bg-gray-200 text-gray-600 hover:bg-gray-300"}`}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              {darkMode ? <FaSun size={24} /> : <FaMoon size={24} />}
+            </motion.button>
+            <div className="relative">
+              <motion.button
+                onClick={() => setProfileOpen(!profileOpen)}
+                className={`flex items-center space-x-2 p-2 rounded-full ${darkMode ? "bg-gray-600 hover:bg-gray-500" : "bg-gray-200 hover:bg-gray-300"}`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <FaUser size={20} />
+                <span className="hidden md:inline">{userData?.name || "Admin"}</span>
+              </motion.button>
+              {profileOpen && (
+                <motion.div
+                  className={`absolute right-0 mt-2 w-48 ${darkMode ? "bg-gray-700 text-white" : "bg-white text-gray-900"} rounded-md shadow-lg z-10`}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Link to="/admin/profile" className={`flex items-center space-x-2 px-4 py-2 hover:${darkMode ? "bg-gray-600" : "bg-gray-100"}`}>
+                    <FaUser size={16} />
+                    <span>Profile</span>
+                  </Link>
+                  <button
+                    onClick={handleForgotPassword}
+                    className={`flex items-center space-x-2 w-full text-left px-4 py-2 hover:${darkMode ? "bg-gray-600" : "bg-gray-100"}`}
+                  >
+                    <FaLock size={16} />
+                    <span>Forgot Password</span>
+                  </button>
+                </motion.div>
+              )}
+            </div>
+          </div>
         </motion.div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { icon: FaUsers, label: "Total Users", value: adminData.totalUsers-1, color: "from-blue-600 to-blue-400" },
+            { icon: FaUsers, label: "Total Users", value: adminData.totalUsers - 1, color: "from-blue-600 to-blue-400" },
             { icon: FaUserGraduate, label: "Students", value: adminData.totalStudents, color: "from-green-600 to-green-400" },
             { icon: FaUserTie, label: "Officers", value: adminData.totalOfficers, color: "from-purple-600 to-purple-400" },
             { icon: FaChalkboardTeacher, label: "Training Team", value: adminData.totalTrainingTeam, color: "from-orange-600 to-orange-400" },
