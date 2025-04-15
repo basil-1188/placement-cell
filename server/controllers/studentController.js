@@ -1077,42 +1077,113 @@ export const submitFeedback = async (req, res) => {
   }
 };
 
+export const getStudentInterviews = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id).select('role');
+    if (!user || user.role !== "student") {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Access denied: Student role required" 
+      });
+    }
+
+    const interviews = await Interview.find({
+      studentId: user._id,
+      status: "completed",
+    })
+      .select("_id completedAt questions")
+      .sort({ completedAt: -1 })
+      .lean();
+
+    if (!Array.isArray(interviews)) {
+      console.error("Database returned non-array:", interviews);
+      throw new Error("Invalid data format from database");
+    }
+
+    const processedInterviews = interviews.map(interview => {
+      console.log(`Processing interview ${interview._id}:`, {
+        completedAt: interview.completedAt,
+        questionCount: interview.questions?.length,
+      });
+
+      return {
+        id: interview._id.toString(),
+        completedAt: interview.completedAt || null,
+        questionCount: Array.isArray(interview.questions) ? interview.questions.length : 0,
+      };
+    });
+
+    console.log("API response data:", processedInterviews);
+
+    return res.status(200).json({
+      success: true,
+      message: "Completed interviews fetched successfully",
+      data: processedInterviews,
+    });
+  } catch (error) {
+    console.error("Error in getStudentInterviews:", error.message);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Server error" 
+    });
+  }
+};
+
 export const getInterviewFeedback = async (req, res) => {
   try {
-    const student = await userModel.findById(req.user?._id);
-    if (!student || student.role !== "student") {
-      return res.status(403).json({ success: false, message: "Access denied. Student role required." });
+    const user = await userModel.findById(req.user?._id).select('role');
+    if (!user || user.role !== "student") {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Access denied: Student role required" 
+      });
     }
 
-    const { id } = req.params;
-    if (!id || id === "undefined") {
-      return res.status(400).json({ success: false, message: "Invalid interview ID" });
-    }
+    const interview = await Interview.findOne({
+      _id: req.params.id,
+      studentId: user._id,
+      status: "completed",
+    })
+      .select("_id completedAt performanceScore questions responses")
+      .lean();
 
-    const interview = await Interview.findById(id).populate("studentId", "name");
     if (!interview) {
-      return res.status(404).json({ success: false, message: "Interview not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Interview not found or not completed",
+      });
     }
 
-    if (interview.studentId._id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: "You can only view your own feedback" });
-    }
+    const processedResponses = Array.isArray(interview.responses)
+      ? interview.responses.map(response => ({
+          questionIndex: response.questionIndex,
+          answer: response.answer || "No answer provided",
+          feedback: response.feedback || "No feedback provided",
+        }))
+      : [];
 
-    const feedbackData = {
-      overallScore: interview.performanceScore || 0,
-      overallComment: interview.performanceScore ? "Reviewed by admin" : "Awaiting admin feedback",
-      responses: interview.responses.map((resp) => ({
-        questionIndex: resp.questionIndex,
-        question: interview.questions[resp.questionIndex]?.text || "Question not found",
-        answer: resp.answer || "No answer provided",
-        feedback: resp.feedback || "No feedback yet",
-      })),
+    const processedInterview = {
+      id: interview._id.toString(),
+      completedAt: interview.completedAt || null,
+      performanceScore: interview.performanceScore != null ? interview.performanceScore : null,
+      questions: Array.isArray(interview.questions)
+        ? interview.questions.map(q => ({ text: q.text || "Question not available" }))
+        : [],
+      responses: processedResponses,
     };
 
-    console.log("Feedback response for ID:", id, feedbackData);
-    res.json({ success: true, data: feedbackData });
+    console.log(`Interview ${interview._id} feedback data:`, processedInterview);
+
+    return res.status(200).json({
+      success: true,
+      message: "Interview feedback fetched successfully",
+      data: processedInterview,
+    });
   } catch (error) {
-    console.error("Error fetching interview feedback:", error.message);
-    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+    console.error("Error in getInterviewFeedback:", error.message);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Server error" 
+    });
   }
 };

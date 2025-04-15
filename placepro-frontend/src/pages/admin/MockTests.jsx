@@ -88,18 +88,18 @@ const MockTests = () => {
   const handleGraphClick = (event, elements) => {
     if (elements.length > 0) {
       const index = elements[0].index;
-      const test = tests[index];
+      const test = filteredTests[index]; // Use filteredTests to match visible data
       setSelectedTest(test._id === selectedTest ? null : test._id);
     }
   };
 
   const performanceData = {
-    labels: tests.map((test) => test.testName),
+    labels: filteredTests.map((test) => test.testName), // Use filteredTests
     datasets: [
       {
         label: "Average Mark (% of Pass Mark)",
-        data: tests.map((test) =>
-          test.passMark ? ((test.avgMark / test.passMark) * 100).toFixed(2) : 0
+        data: filteredTests.map((test) =>
+          test.passMark ? ((parseFloat(test.avgMark) / test.passMark) * 100).toFixed(2) : 0
         ),
         borderColor: "rgba(59, 130, 246, 1)",
         backgroundColor: "rgba(59, 130, 246, 0.2)",
@@ -134,7 +134,7 @@ const MockTests = () => {
     scales: {
       y: {
         beginAtZero: true,
-        max: 150,
+        max: 200, // Increased to handle >100% (e.g., APTITUDE TEST 3)
         title: { display: true, text: "Avg Mark (% of Pass Mark)", font: { size: 14 }, color: darkMode ? "#ffffff" : "#000000" },
         grid: { color: darkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)" },
         ticks: { color: darkMode ? "#ffffff" : "#000000" },
@@ -272,7 +272,7 @@ const MockTests = () => {
                           </td>
                           <td className="p-4">{test.attendedCount}</td>
                           <td className="p-4">{test.notAttendedCount}</td>
-                          <td className="p-4">{test.avgMark}/{test.passMark} ({((test.avgMark / test.passMark) * 100).toFixed(2)}%)</td>
+                          <td className="p-4">{test.avgMark}/{test.passMark} ({test.passMark ? ((parseFloat(test.avgMark) / test.passMark) * 100).toFixed(2) : 0}%)</td>
                         </motion.tr>
                       ))}
                     </tbody>

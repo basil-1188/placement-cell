@@ -1,6 +1,6 @@
 import { useState, useContext } from "react";
 import { motion } from "framer-motion";
-import { FaBars, FaTimes, FaUsers, FaUserGraduate, FaUserTie, FaChalkboardTeacher, FaUser, FaChartLine, FaTools, FaFileAlt, FaVideo, FaBriefcase, FaRobot, FaBlog, FaBell, FaBuilding, FaList, FaChartBar, FaComments } from "react-icons/fa";
+import { FaBars, FaTimes, FaUsers, FaUserGraduate, FaUserTie, FaChalkboardTeacher, FaUser, FaChartLine, FaTools, FaFileAlt, FaVideo, FaBriefcase, FaRobot, FaBlog, FaBell, FaBuilding, FaList, FaChartBar, FaComments, FaCommentAlt } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import { AppContext } from "../../context/AppContext";
 
@@ -25,7 +25,6 @@ const AdminSidebar = ({ isMinimized, setIsMinimized }) => {
   };
 
   const adminNavItems = [
-    { path: "/admin", label: "Dashboard", icon: FaChartLine },
     {
       path: "/admin/manage-users",
       label: "Manage Users",
@@ -45,10 +44,11 @@ const AdminSidebar = ({ isMinimized, setIsMinimized }) => {
       icon: FaRobot,
       dropdown: [
         { path: "/admin/ai-interviews/schedule", label: "Schedule Questions", icon: FaList },
-        { path: "/admin/ai-interviews/results", label: "Results", icon: FaChartBar },
+        { path: "/admin/ai-interviews/interviews", label: "Interviews", icon: FaChartBar },
         { path: "/admin/ai-interviews/feedback", label: "Feedback", icon: FaComments },
       ],
     },
+    { path: "/admin/all-feedbacks", label: "Feedbacks", icon: FaCommentAlt  },
     { path: "/admin/blogs", label: "Blogs & Tips", icon: FaBlog },
     { path: "/admin/reports", label: "Reports", icon: FaChartLine },
     { path: "/admin/notifications", label: "Notifications", icon: FaBell },

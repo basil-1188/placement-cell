@@ -194,49 +194,76 @@ export const getOfficerTrainingTeam = async (req, res) => {
 
 export const getMockTests = async (req, res) => {
   try {
-    const user = await userModel.findById(req.user._id);
+    const user = await userModel.findById(req.user?._id).lean();
     if (!user || user.role !== "admin") {
       return res.status(403).json({ success: false, message: "Access denied. Admin role required." });
     }
 
     const tests = await mockTestModel
       .find()
-      .populate("createdBy", "name email")
+      .populate({
+        path: "createdBy",
+        select: "name email",
+      })
       .lean();
 
     const allStudents = await userModel.find({ role: "student" }).select("_id").lean();
-    const studentIds = allStudents.map((s) => s._id);
+    const studentIds = allStudents.map((s) => s._id.toString());
 
     const testsWithData = await Promise.all(
       tests.map(async (test) => {
-        const results = await mockTestResultModel
-          .find({ mockTestId: test._id })
-          .populate("studentId", "name admnNo email")
-          .lean();
+        try {
+          const results = await mockTestResultModel
+            .find({ mockTestId: test._id })
+            .populate({
+              path: "studentId",
+              select: "name admnNo email",
+            })
+            .lean();
 
-        const attendedStudentIds = results.map((r) => r.studentId._id.toString());
-        const notAttendedCount = studentIds.filter(
-          (id) => !attendedStudentIds.includes(id.toString())
-        ).length;
+          console.log(`Test ${test._id}: Found ${results.length} results`);
 
-        const avgMark = results.length
-          ? (results.reduce((sum, r) => sum + r.mark, 0) / results.length).toFixed(2)
-          : 0;
+          const attendedStudentIds = results
+            .filter((r) => r.studentId)
+            .map((r) => r.studentId._id.toString());
+          const notAttendedCount = studentIds.filter(
+            (id) => !attendedStudentIds.includes(id)
+          ).length;
 
-        return {
-          ...test,
-          results,
-          attendedCount: results.length,
-          notAttendedCount,
-          avgMark,
-        };
+          const avgMark = results.length
+            ? (
+                results.reduce((sum, r) => sum + (r.mark || 0), 0) /
+                results.length
+              ).toFixed(2)
+            : "0.00";
+
+          return {
+            ...test,
+            createdBy: test.createdBy || { name: "Unknown", email: "N/A" },
+            results,
+            attendedCount: results.length,
+            notAttendedCount,
+            avgMark,
+          };
+        } catch (error) {
+          console.error(`Error processing test ${test._id}:`, error.message);
+          return {
+            ...test,
+            createdBy: test.createdBy || { name: "Unknown", email: "N/A" },
+            results: [],
+            attendedCount: 0,
+            notAttendedCount: studentIds.length,
+            avgMark: "0.00",
+            error: `Failed to load results: ${error.message}`,
+          };
+        }
       })
     );
 
     res.status(200).json({ success: true, tests: testsWithData });
   } catch (error) {
-    console.error("Error in getMockTests:", error.message);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("Error in getMockTests:", error.message, error.stack);
+    return res.status(500).json({ success: false, message: `Server error: ${error.message}` });
   }
 };
 
@@ -654,6 +681,136 @@ export const getInterviewResults = async (req, res) => {
   }
 };
 
+export const getInterviews = async (req, res) => {
+  try {
+    const admin = await userModel.findById(req.user?._id);
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied. Admin role required." });
+    }
+
+    const interviews = await Interview.find({ createdBy: admin._id })
+      .populate("studentId", "name")
+      .select("studentId scheduledAt status completedAt questions");
+
+    const groupedInterviews = {};
+    interviews.forEach((interview) => {
+      const questionsKey = JSON.stringify(interview.questions.map((q) => q.text).sort());
+      if (!groupedInterviews[questionsKey]) {
+        groupedInterviews[questionsKey] = {
+          id: interview._id.toString(),
+          title: `AI Interview on ${interview.completedAt || interview.scheduledAt}`,
+          date: interview.completedAt || interview.scheduledAt,
+          totalStudents: 0,
+          completedStudents: 0,
+        };
+      }
+      groupedInterviews[questionsKey].totalStudents += 1;
+      if (interview.status === "completed") {
+        groupedInterviews[questionsKey].completedStudents += 1;
+      }
+    });
+
+    const interviewList = Object.values(groupedInterviews).map((group) => ({
+      id: group.id,
+      type: "AI Interview",
+      title: group.title,
+      date: group.date,
+      status: `${group.completedStudents} out of ${group.totalStudents}`,
+      studentCount: group.totalStudents,
+    }));
+
+    res.json({ success: true, data: interviewList });
+  } catch (error) {
+    console.error("Error fetching interviews:", error.message);
+    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+  }
+};
+
+export const getInterviewParticipants = async (req, res) => {
+  try {
+    const admin = await userModel.findById(req.user?._id);
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied. Admin role required." });
+    }
+
+    const interviewId = req.params.id;
+    const referenceInterview = await Interview.findById(interviewId)
+      .populate("studentId", "name")
+      .select("questions createdBy");
+
+    if (!referenceInterview || referenceInterview.createdBy.toString() !== admin._id.toString()) {
+      return res.status(404).json({ success: false, message: "Interview not found or access denied." });
+    }
+
+    const questionTexts = referenceInterview.questions.map((q) => q.text).sort();
+    const interviews = await Interview.find({
+      createdBy: admin._id,
+    })
+      .populate("studentId", "name")
+      .select("studentId status completedAt scheduledAt questions");
+
+    const matchedInterviews = interviews.filter((interview) => {
+      const currentQuestions = interview.questions.map((q) => q.text).sort();
+      return (
+        currentQuestions.length === questionTexts.length &&
+        currentQuestions.every((q, i) => q === questionTexts[i])
+      );
+    });
+
+    const participants = matchedInterviews.map((interview) => ({
+      studentId: interview.studentId?._id.toString(),
+      studentName: interview.studentId?.name || "Unknown",
+      status: interview.status,
+      date: interview.completedAt || interview.scheduledAt,
+    }));
+
+    res.json({ success: true, data: participants });
+  } catch (error) {
+    console.error("Error fetching participants:", error.message);
+    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+  }
+};
+
+export const getStudentResponses = async (req, res) => {
+  try {
+    const admin = await userModel.findById(req.user?._id);
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied. Admin role required." });
+    }
+
+    const { interviewId, studentId } = req.params;
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      studentId,
+      createdBy: admin._id,
+    })
+      .populate("studentId", "name")
+      .select("questions responses performanceScore status completedAt scheduledAt");
+
+    if (!interview) {
+      return res.status(404).json({ success: false, message: "Interview not found for this student" });
+    }
+
+    const data = {
+      studentName: interview.studentId?.name || "Unknown",
+      status: interview.status,
+      date: interview.completedAt || interview.scheduledAt,
+      performanceScore: interview.performanceScore,
+      responses: interview.responses.map((resp) => ({
+        questionIndex: resp.questionIndex,
+        question: interview.questions[resp.questionIndex]?.text || "Unknown question",
+        answer: resp.answer,
+        feedback: resp.feedback || "",
+      })),
+    };
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error("Error fetching student responses:", error.message);
+    res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+  }
+};
+
 export const updateInterviewFeedback = async (req, res) => {
   try {
     const admin = await userModel.findById(req.user?._id);
@@ -732,5 +889,85 @@ export const getInterviewFeedback = async (req, res) => {
   } catch (error) {
     console.error("Error fetching feedback:", error);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const getFeedback = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id).lean();
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied. Admin role required." });
+    }
+
+    const feedback = await Feedback.find({
+      type: { $in: ["mocktest", "job", "studymaterial", "general"] },
+    })
+      .populate("submittedBy", "name email")
+      .populate("targetUser", "name email")
+      .lean();
+
+    const formattedFeedback = feedback.map((fb) => ({
+      _id: fb._id,
+      type: fb.type,
+      comment: fb.comment,
+      rating: fb.rating || "N/A",
+      submittedBy: fb.submittedBy ? fb.submittedBy.name : "Unknown",
+      submittedByEmail: fb.submittedBy ? fb.submittedBy.email : "N/A",
+      submittedAt: fb.submittedAt,
+      targetRole: fb.targetRole,
+      targetUser: fb.targetUser ? fb.targetUser.name : "N/A",
+      targetUserEmail: fb.targetUser ? fb.targetUser.email : "N/A",
+    }));
+
+    res.status(200).json({ success: true, feedback: formattedFeedback });
+  } catch (error) {
+    console.error("Error in getFeedback:", error.message, error.stack);
+    return res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+  }
+};
+
+export const getProfile = async (req, res) => {
+  try {
+    const user = await userModel
+      .findById(req.user?._id)
+      .select("name email role profileImage createdAt updatedAt")
+      .lean();
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied. Admin role required." });
+    }
+
+    res.status(200).json({ success: true, profile: user });
+  } catch (error) {
+    console.error("Error in getProfile:", error.message, error.stack);
+    return res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user?._id);
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied. Admin role required." });
+    }
+
+    const { name, profileImage } = req.body;
+    if (name) user.name = name;
+    if (profileImage) user.profileImage = profileImage;
+
+    await user.save();
+
+    const updatedUser = {
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      profileImage: user.profileImage,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+
+    res.status(200).json({ success: true, profile: updatedUser, message: "Profile updated successfully" });
+  } catch (error) {
+    console.error("Error in updateProfile:", error.message, error.stack);
+    return res.status(500).json({ success: false, message: `Server error: ${error.message}` });
   }
 };

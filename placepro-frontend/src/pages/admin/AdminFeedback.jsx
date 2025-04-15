@@ -5,10 +5,10 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
 import { MagnifyingGlassIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
-import { FaMoon, FaSun, FaArrowLeft, FaComments } from "react-icons/fa";
+import { FaMoon, FaSun, FaArrowLeft } from "react-icons/fa";
 import AdminSidebar from "../../components/admin/AdminSidebar";
 
-const InterviewFeedback = () => {
+const AdminFeedback = () => {
   const { backendUrl, userData } = useContext(AppContext);
   const [feedback, setFeedback] = useState([]);
   const [filteredFeedback, setFilteredFeedback] = useState([]);
@@ -28,17 +28,12 @@ const InterviewFeedback = () => {
 
     const fetchFeedback = async () => {
       try {
-        const response = await axios.get(`${backendUrl}/api/admin/interview-feedback`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        const response = await axios.get(`${backendUrl}/api/admin/feedback`, {
           withCredentials: true,
         });
         if (response.data.success) {
-          // Filter for interview and query types
-          const aiFeedback = response.data.data.filter((fb) =>
-            ["interview", "query"].includes(fb.type)
-          );
-          setFeedback(aiFeedback);
-          setFilteredFeedback(aiFeedback);
+          setFeedback(response.data.feedback);
+          setFilteredFeedback(response.data.feedback);
         } else {
           toast.error(response.data.message || "Failed to fetch feedback");
           navigate("/admin");
@@ -87,9 +82,7 @@ const InterviewFeedback = () => {
       >
         <div className="max-w-7xl mx-auto space-y-8">
           <div className={`shadow-lg rounded-xl p-6 flex justify-between items-center border-t-4 border-indigo-500 ${darkMode ? "bg-gray-800" : "bg-white"}`}>
-            <h1 className="text-3xl font-bold flex items-center">
-              <FaComments className="mr-3 text-indigo-400" /> AI Feedback
-            </h1>
+            <h1 className="text-3xl font-bold">Feedback Overview</h1>
             <div className="flex items-center gap-4">
               <motion.button
                 onClick={() => setDarkMode(!darkMode)}
@@ -129,8 +122,10 @@ const InterviewFeedback = () => {
                   className={`w-full pl-3 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none shadow-sm ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-700"}`}
                 >
                   <option value="all">All Types</option>
-                  <option value="interview">Interview</option>
-                  <option value="query">Query</option>
+                  <option value="mocktest">Mock Test</option>
+                  <option value="job">Job</option>
+                  <option value="studymaterial">Study Material</option>
+                  <option value="general">General</option>
                 </select>
                 <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               </div>
@@ -139,7 +134,7 @@ const InterviewFeedback = () => {
 
           <div className={`shadow-lg rounded-xl border-t-4 border-indigo-500 overflow-hidden ${darkMode ? "bg-gray-800" : "bg-white"}`}>
             <div className="p-6">
-              <h2 className="text-2xl font-semibold mb-6">AI Feedback List</h2>
+              <h2 className="text-2xl font-semibold mb-6">Feedback List</h2>
               {filteredFeedback.length === 0 ? (
                 <p className={`text-center py-6 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>No feedback found for the selected filters.</p>
               ) : (
@@ -149,15 +144,17 @@ const InterviewFeedback = () => {
                       <tr>
                         <th className="p-4 font-medium">Type</th>
                         <th className="p-4 font-medium">Comment</th>
+                        <th className="p-4 font-medium">Rating</th>
                         <th className="p-4 font-medium">Submitted By</th>
                         <th className="p-4 font-medium">Submitted At</th>
                         <th className="p-4 font-medium">Target Role</th>
+                        <th className="p-4 font-medium">Target User</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredFeedback.map((fb) => (
                         <motion.tr
-                          key={fb.entityId || fb.submittedAt}
+                          key={fb._id}
                           className={`border-b hover:bg-gray-700 transition-colors ${darkMode ? "border-gray-700" : "border-gray-200"}`}
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -167,9 +164,11 @@ const InterviewFeedback = () => {
                             {fb.type.charAt(0).toUpperCase() + fb.type.slice(1)}
                           </td>
                           <td className="p-4">{fb.comment}</td>
-                          <td className="p-4">{fb.submittedBy}</td>
+                          <td className="p-4">{fb.rating}</td>
+                          <td className="p-4">{fb.submittedBy} ({fb.submittedByEmail})</td>
                           <td className="p-4">{new Date(fb.submittedAt).toLocaleString()}</td>
                           <td className="p-4">{fb.targetRole}</td>
+                          <td className="p-4">{fb.targetUser} ({fb.targetUserEmail})</td>
                         </motion.tr>
                       ))}
                     </tbody>
@@ -184,4 +183,4 @@ const InterviewFeedback = () => {
   );
 };
 
-export default InterviewFeedback;
+export default AdminFeedback;

@@ -1,6 +1,6 @@
 import express from "express";
 import userAuth from "../middleware/userAuth.js";
-import { deleteStudent, getAdminIndex, getAdminTools, getAllBlogs, getAllJobs, getAllTheStudents, getAllUsers, getCampusDriveApplicants, getDashboardStats, getFullUserDetails, getInterviewFeedback, getInterviewResults, getMockTests, getNotifications, getOfficerTrainingTeam, getReports, getTrainingResources, scheduleInterviewQuestions, updateInterviewFeedback, updateRole } from "../controllers/adminController.js"; 
+import { deleteStudent, getAdminIndex, getAdminTools, getAllBlogs, getAllJobs, getAllTheStudents, getAllUsers, getCampusDriveApplicants, getDashboardStats, getFeedback, getFullUserDetails, getInterviewFeedback, getInterviewParticipants, getInterviewResults, getInterviews, getMockTests, getNotifications, getOfficerTrainingTeam, getProfile, getReports, getStudentResponses, getTrainingResources, scheduleInterviewQuestions, updateInterviewFeedback, updateProfile, updateRole } from "../controllers/adminController.js"; 
 
 const adminRouter = express.Router();
 
@@ -23,6 +23,12 @@ adminRouter.post('/schedule-interview-questions', userAuth, scheduleInterviewQue
 adminRouter.get('/students', userAuth, getAllTheStudents);
 adminRouter.get('/interview-results', userAuth, getInterviewResults);
 adminRouter.get('/interview-feedback', userAuth, getInterviewFeedback);
-adminRouter.patch('/interview-feedback', userAuth, updateInterviewFeedback);
+adminRouter.get('/interviews', userAuth, getInterviews);
+adminRouter.get('/interview-participants/:id', userAuth, getInterviewParticipants);
+adminRouter.get("/student-responses/:interviewId/:studentId", userAuth, getStudentResponses);
+adminRouter.post("/update-feedback", userAuth, updateInterviewFeedback);
+adminRouter.get("/feedback", userAuth, getFeedback);
+adminRouter.get("/profile", userAuth, getProfile);
+adminRouter.put("/profile", userAuth, updateProfile);
 
 export default adminRouter;

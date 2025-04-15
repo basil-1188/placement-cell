@@ -67,13 +67,18 @@ import Reports from "./pages/admin/Reports";
 import Notifications from "./pages/admin/Notifications";
 import AdminTools from "./pages/admin/AdminTools";
 import ScheduleQuestions from "./pages/admin/ScheduleQuestions";
-import InterviewResults from "./pages/admin/InterviewResults";
 import InterviewFeedback from "./pages/admin/InterviewFeedback";
 import AIInterviewTakeTest from "./pages/user/AIInterviewTakeTest";
-import AIInterviewHistory from "./pages/user/AIInterviewHistory";
 import AIInterviewQuery from "./pages/user/AIInterviewQuery";
 import AIInterviewDetail from "./pages/user/AIInterviewDetail";
 import AIInterviewFeedback from "./pages/user/AIInterviewFeedback";
+import InterviewHistoryList from "./pages/user/InterviewHistoryList";
+import InterviewDetails from "./pages/user/InterviewDetails";
+import AdminInterviews from "./pages/admin/AdminInterviews";
+import InterviewParticipants from "./pages/admin/InterviewParticipants";
+import StudentResponses from "./pages/admin/StudentResponses";
+import AdminFeedback from "./pages/admin/AdminFeedback";
+import AdminProfile from "./pages/admin/AdminProfile";
 
 const ProtectedRoute = ({ children, allowedRoles, isPublic = false }) => {
   const { isLogin, userData, loading } = useContext(AppContext);
@@ -136,7 +141,8 @@ const App = () => {
               <Route path="resume/ats-checker" element={<ATSChecker />} />
               <Route path="ai-interview/take-test" element={<AIInterviewTakeTest />} />
               <Route path="ai-interview/take-test/:id" element={<AIInterviewDetail />} />
-              <Route path="ai-interview/history" element={<AIInterviewHistory />} />
+              <Route path="interviews" element={<InterviewHistoryList />} />
+              <Route path="interviews/:id" element={<InterviewDetails />} />
               <Route path="ai-interview/feedback" element={<AIInterviewFeedback />} />
               <Route path="ai-interview/query" element={<AIInterviewQuery />} />
               <Route path="mock-tests">
@@ -165,11 +171,15 @@ const App = () => {
               <Route path="blogs" element={<BlogsManagement />}  />
               <Route path="/admin/blog/:blogId" element={<BlogView />} />
               <Route path="reports" element={<Reports />}  />
+              <Route path="all-feedbacks" element={<AdminFeedback />}  />
+              <Route path="profile" element={<AdminProfile />}  />
               <Route path="notifications" element={<Notifications />}  />
               <Route path="admin-tools" element={<AdminTools />}  />
               <Route path="ai-interviews/schedule" element={<ScheduleQuestions />} />
-              <Route path="ai-interviews/results" element={<InterviewResults />} />
               <Route path="ai-interviews/feedback" element={<InterviewFeedback />} />
+              <Route path="ai-interviews/interviews" element={<AdminInterviews />} />
+              <Route path="interview-participants/:id" element={<InterviewParticipants />} />
+              <Route path="student-responses/:interviewId/:studentId" element={<StudentResponses />} />
             </Route>
             <Route
               path="/officer"

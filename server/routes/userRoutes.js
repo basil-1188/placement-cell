@@ -2,7 +2,7 @@ import express from 'express';
 import userAuth from '../middleware/userAuth.js';
 import { getUserData } from '../controllers/userController.js';
 import { atsUpload, uploadProfileImage, uploadResume } from '../middleware/multer.js';
-import { addStudentDetails, applyForCampusDrive, attendMockTest, deleteStudentResume, getAvailableMockTests, getBlogById, getInterviewFeedback, getLiveLink, getRanks, getStudentBlogs, getStudentDetails, getStudentMarks, getStudentQA, getUserInterviewById, getUserInterviews, getUserMaterials, jobOpening, manualResumeFeedback, pastResults, showUserVideos, submitFeedback, submitInterviewResponse, submitMockTest, submitQuery, updateProfileImage } from '../controllers/studentController.js';
+import { addStudentDetails, applyForCampusDrive, attendMockTest, deleteStudentResume, getAvailableMockTests, getBlogById, getInterviewFeedback, getLiveLink, getRanks, getStudentBlogs, getStudentDetails, getStudentInterviews, getStudentMarks, getStudentQA, getUserInterviewById, getUserInterviews, getUserMaterials, jobOpening, manualResumeFeedback, pastResults, showUserVideos, submitFeedback, submitInterviewResponse, submitMockTest, submitQuery, updateProfileImage } from '../controllers/studentController.js';
 import { getCampusDriveStudents } from '../controllers/officerContoller.js';
 import { checkResume } from '../controllers/atsController.js';
 
@@ -35,6 +35,6 @@ userRouter.get("/ai-interview/:id", userAuth, getUserInterviewById);
 userRouter.post("/ai-interview-query", userAuth, submitQuery);
 userRouter.post("/ai-interview/:id/response", userAuth, submitInterviewResponse);
 userRouter.post("/submit-feedback", userAuth, submitFeedback);
+userRouter.get("/ai-interviews", userAuth, getStudentInterviews);
 userRouter.get("/ai-interview/:id/feedback", userAuth, getInterviewFeedback);
-
 export default userRouter;

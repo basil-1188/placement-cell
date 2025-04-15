@@ -74,7 +74,7 @@ const StudentNavbar = () => {
           label: "AI INTERVIEW",
           dropdown: [
             { path: "/user/ai-interview/take-test", label: "Take Test" },
-            { path: "/user/ai-interview/history", label: "History" },
+            { path: "/user/interviews", label: "History" },
             { path: "/user/ai-interview/query", label: "Query" },
           ],
         },
